@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Component
+    xmlns="http://www.red5studios.com/" 
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+    xsi:schemaLocation="http://www.red5studios.com/ ../../../schemas/component.xsd"
+    >
+    <Info
+        title="xControllerUtil"
+        author="Xsear"
+        description=""
+        url=""
+        uiVersion="1000"
+    />
+
+    <Events>
+        <!-- Firefall -->
+        <Event name="ON_COMPONENT_LOAD"            bind="OnComponentLoad"     />
+    
+        <Event name="ON_PLAYER_READY"              bind="OnPlayerReady" />
+    
+        <Event name="ON_ABILITY_USED"              bind="OnAbilityUsed" />
+        <Event name="ON_ABILITY_FAILED"            bind="OnAbilityFailed" />
+        <Event name="ON_PLACE_CALLDOWN"            bind="OnPlaceCalldown" />
+
+    </Events>
+
+
+    <Textures>
+        <RenderTarget name="rt" width="1024" height="512">
+            <Region name="left" left="0" right="341.333333333" top="0" bottom="341.33"/>
+            <Region name="middle" left="341.333333333" right="682.666666666" top="0" bottom="341.33"/>
+            <Region name="right" left="682.666666666" right="1024" top="0" bottom="341.33"/>
+        </RenderTarget>
+
+        <Texture name="scanlines" src="./textures/scanLines.png" />
+        <Texture name="alpha" src="./textures/alpha.png" />
+    </Textures>
+
+    <Styles>
+
+        <StyleSheet name="panelBG" parent="PanelBackDrop">
+            clip-children:false;
+            alpha:0.7;
+            tint:#222222;
+        </StyleSheet>
+
+        <StyleSheet name="FadedBorder" parent="ButtonSolid">
+            tint:#121318;
+            exposure:1.0;
+        </StyleSheet>
+
+    </Styles>
+
+    <BluePrints>
+
+        <BluePrint name="FilledButtonPrint" instantiable="true">
+            <Border name="outer" dimensions="dock:fill" class="FadedBorder" style="eatsmice:false; padding:5; exposure:.25; tint:394042"/>
+            <Group name="icon" dimensions="dock:fill" style="eatsmice:false"/>
+            <StillArt name="highlight" dimensions="dock:fill" style="eatsmice:false; texture:colors; region:white; tint:ui_positive; visible:false;"/>
+            <FocusBox name="focus" dimensions="dock:fill" style="cursor:sys_hand"/>
+        </BluePrint>
+
+
+        <BluePrint name="Panel" instantiable="true">
+            <Border dimensions="dock:fill" class="PanelBackDrop" />
+        </BluePrint>
+
+        <BluePrint name="PaneLayoutMain" instantiable="true">
+            <Group name="LeftColumn" dimensions="left:0; top:0; height:100%; width:25%;" blueprint="Panel" style="alpha:1">
+            </Group>
+            <Group name="MainArea" dimensions="left:25%+1; top:0; height:100%; width:75%;" blueprint="Panel" style="tint:F94042">
+                <Group name="List" dimensions="width:100%;height:100%-68;top:68;"/>
+            </Group>
+        </BluePrint>
+
+        <BluePrint name="KeyCatcher" instantiable="true">
+            <KeyCatcher name="KeyCatch" dimensions="relative:screen; height:0; width:0;" style="eatsmice:false">
+            </KeyCatcher>
+        </BluePrint>
+    
+        <BluePrint name="Pie" instantiable="true">
+            <Group dimenstions="width:50%;center-x:50%;height:50%;center-y:50%;" blueprint="KeyCatcher"/>
+        </BluePrint>
+
+         <BluePrint name="PieSegment" instantiable="true">
+            <Icon name="icon" dimensions="dock:fill aspect:1.1;" style="fixed-bounds:true; alpha:1;" />
+        </BluePrint>
+        
+    
+        <BluePrint name="KeyPieSegment" instantiable="true">
+            <Icon name="icon" dimensions="dock:fill aspect:1.1;" style="fixed-bounds:true; alpha:1;" />
+            <Group name="inputIconGroup" dimensions="width:100%;height:100%;top:66%;" />
+        </BluePrint>
+
+    </BluePrints>
+
+    <Frames>
+        <PanelFrame name="FosterFrame" dimensions="center-x:36%; center-y:40%; width:70%; height:60%" visible="false" depth="0">
+            <Children>
+                <Group id="Parent" dimensions="top:0; left:0; width:100%; height:22;" style="visible:false;"> 
+                    <Group id="Fostering" dimensions="top:0; left:0; width:100%; height:22;" style="visible:false;"/> 
+                </Group>
+            </Children>
+        </PanelFrame>
+
+        <PanelFrame name="Options" dimensions="center-x:36%; center-y:40%; width:70%; height:60%" visible="false" depth="0">
+            <Children>
+                <Group id="Window" dimensions="right:100%; top:0; height:100%; left:0" style="alpha:1">
+                    <!-- Title -->
+                    <Group dimensions="left:0; top:0; height:38; width:100%" blueprint="Panel">
+                        <Group id="MovableParent" dimensions="dock:fill"/>
+                        <Text id="title" dimensions="top:0; left:0; width:100%; height:38" style="font:Demi_15; halign:center; valign:center;  color:PanelTitle;"/>
+                        <FocusBox id="close" dimensions="left:100%-48; right:100%; top:0; bottom:100%" class="ui_button">
+                            <Border dimensions="dock:fill" style="tint:000000; alpha:0.5; padding:3; "/>
+                            <StillArt name="X" dimensions="center-x:50%; center-y:50%; width:16; height:16" style="texture:DialogWidgets; region:close; eatsmice:false"/>
+                        </FocusBox>
+                    </Group>
+
+                    <!-- Body -->
+                    <Group dimensions="left:0; top:40; height:100%; width:100%">                        
+                        <Group dimensions="left:0; top:0; height:100%; width:100%" blueprint="Panel">
+                            <Group id="Panes" dimensions="left:0; top:0; bottom:100%; right:100%"/>
+                        </Group>
+                    </Group>
+                </Group>
+            </Children>
+            <OnClose bind="OnClose"/>
+            <OnEscape bind="OnClose"/>
+        </PanelFrame>
+    
+    
+        <PanelFrame name="Bakery" dimensions="width:50%; height:50%; center-y:50%; center-x:50%;" permanent="true" visible="true" depth="10">
+            <Children>
+                <!--
+                <StillArt name="Background" dimensions="dock:fill" style="texture:colors; region:white; tint:#000000; alpha:0.3;"/>
+                -->
+                <Group id="PieContainer" dimensions="dock:fill"/>
+            </Children>
+        </PanelFrame>
+
+
+        <!-- straight outta invii -->
+        <TextureFrame name="tex" target="rt">
+            <Children>
+                <Group dimensions="top:0; left:0; width:100%; height:341.33">
+                    <StillArt dimensions="dock:fill" style="texture:colors; tint:#317EAA; region:white; alpha:0.4;"/>
+
+                    <Group dimensions="top:1; left:0; width:100%; height:6%"> <!-- Might need to do some uv trickery to get crisper text -->
+
+                        <!-- <StillArt dimensions="top:0; left:0; width:33.333333%; height:100%" style="texture:colors; region:white; tint:#000000; alpha:0.5;"/>
+                        <StillArt dimensions="top:0; left:33.33333%; width:33.33333%-1; height:100%" style="texture:colors; region:white; tint:#000000; alpha:0.5;"/>
+                        <StillArt dimensions="top:0; left:66.66666%; width:33.33333%; height:100%" style="texture:colors; region:white; tint:#000000; alpha:0.5;"/> -->
+
+                        <Text id="Left_Win_Title" key="WINDOW_TITE" dimensions="top:0; left:0; width:33.333333%; height:100%" style="font:Demi_9; halign:center; valign:center; drop-shadow:1; color:#FFFFFF; case:title" />
+                        <Text id="Front_Win_Title"  key="WINDOW_TITE" dimensions="top:0; left:33.33333%; width:33.33333%-1; height:100%" style="font:Demi_9; halign:center; valign:center; drop-shadow:0; color:#FFFFFF; case:title" />
+                        <Text key="WINDOW_TITE" dimensions="top:0; left:66.66666%; width:33.33333%; height:100%" style="font:Demi_9; halign:center; valign:center; drop-shadow:0; color:#FFFFFF; case:title" />
+                    </Group>
+
+                    <Group id="Scroll_Window" dimensions="top:7%; right:0; width:1020; height:93%">
+                        <!-- <StillArt dimensions="dock:fill" style="texture:scanlines; tint:#FF0000; alpha:0;"/> -->
+                    </Group>
+
+                    <Text id="Current_Item_Name" key="WINDOW_TITE" dimensions="top:38%; left:512-6%; width:12%; height:25%" style="font:Demi_9; halign:center; valign:center; drop-shadow:0; color:#FFFFFF; case:title; clip:true; wrap:true;" />
+                </Group>
+            </Children>
+        </TextureFrame>
+
+
+
+    </Frames>
+
+</Component>
