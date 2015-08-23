@@ -177,8 +177,34 @@ function SetupOptionsUI()
     OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON = Component.CreateWidget('<Button id="BindAbilityButton" key="{Bind Ability Pie}" dimensions="left:10.25; width:100%-20.5; top:5%; height:75"/>', OptionsUI.PANE_MAIN_LEFT_COLUMN)
     OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON:BindEvent("OnMouseDown", TestButtonAction)
 
-    OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON = Component.CreateWidget('<Button id="BindAbilityButton" key="{Bind Ability Pie}" dimensions="left:10.25; width:100%-20.5; top:5%; height:75"/>', OptionsUI.PANE_MAIN_LEFT_COLUMN)
-    OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON:BindEvent("OnMouseDown", TestButtonAction)
+    OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON2 = Component.CreateWidget('<Button id="CreatePieButton" key="{Create Pie}" dimensions="left:10.25; width:100%-20.5; top:5%+100; height:75"/>', OptionsUI.PANE_MAIN_LEFT_COLUMN)
+    --OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON2:BindEvent("OnMouseDown", TestButtonAction)
+
+    OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON3 = Component.CreateWidget('<Button id="EditPieButton" key="{Edit Pie}" dimensions="left:10.25; width:100%-20.5; top:5%+200; height:75"/>', OptionsUI.PANE_MAIN_LEFT_COLUMN)
+    --OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON3:BindEvent("OnMouseDown", TestButtonAction)
+
+    OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON4 = Component.CreateWidget('<Button id="DeletePieButton" key="{Delete Pie}" dimensions="left:10.25; width:100%-20.5; top:5%+300; height:75"/>', OptionsUI.PANE_MAIN_LEFT_COLUMN)
+    --OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON4:BindEvent("OnMouseDown", TestButtonAction)
+
+
+    OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON5 = Component.CreateWidget('<Button id="RescanButton" key="{Rescan Controllers}" dimensions="left:10.25; width:100%-20.5; top:5%+400; height:75"/>', OptionsUI.PANE_MAIN_LEFT_COLUMN)
+    OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON5:BindEvent("OnMouseDown", DetectActiveGamepad)
+
+
+    local listItems = {}
+    local countEntries = 0
+    for pieKey, pieContents in pairs(HardCodedCalldownPies) do
+
+        local ENTRY_GROUP = Component.CreateWidget(unicode.format('<Group dimensions="left:20.5; width:100%%-41; top:10%%+%d; height:100"/>', countEntries * 120), OptionsUI.PANE_MAIN_MAIN_AREA_LIST)
+        local innerCount = 0
+        for keyCode, itemId in pairs(pieContents) do
+            local w = Component.CreateWidget('<StillArt dimensions="left:10%+'..(innerCount * 25)..'%; width:20%; height:80%; top:20%;" style="texture:colors; region:white; tint:#ff0000; alpha:0.8;"/>', ENTRY_GROUP)
+            innerCount = innerCount + 1
+        end
+        countEntries = countEntries + 1
+    end
+
+    --OptionsUI.PANE_MAIN_MAIN_AREA_LIST_CHILD_  
 
 
     -- Create layout for Second Pane
