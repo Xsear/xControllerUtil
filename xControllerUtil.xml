@@ -72,21 +72,21 @@
         </BluePrint>
 
         <BluePrint name="KeyCatcher" instantiable="true">
-            <KeyCatcher name="KeyCatch" dimensions="relative:screen; height:0; width:0;" style="eatsmice:false">
+            <KeyCatcher name="KeyCatch" dimensions="dock:fill" style="eatsmice:false">
             </KeyCatcher>
         </BluePrint>
     
         <BluePrint name="Pie" instantiable="true">
-            <Group dimenstions="width:50%;center-x:50%;height:50%;center-y:50%;" blueprint="KeyCatcher"/>
+            <Group dimensions="width:50%;height:50%;center-x:50%;center-y:50%;" />
         </BluePrint>
 
          <BluePrint name="PieSegment" instantiable="true">
-            <Icon name="icon" dimensions="dock:fill aspect:1.1;" style="fixed-bounds:true; alpha:1;" />
+            <Icon name="icon" dimensions="dock:fill" style="fixed-bounds:true; alpha:1;" />
         </BluePrint>
         
     
         <BluePrint name="KeyPieSegment" instantiable="true">
-            <Icon name="icon" dimensions="dock:fill aspect:1.1;" style="fixed-bounds:true; alpha:1;" />
+            <Icon name="icon" dimensions="dock:fill" style="fixed-bounds:true; alpha:1;" />
             <Group name="inputIconGroup" dimensions="width:100%;height:100%;top:66%;" />
         </BluePrint>
 
@@ -127,12 +127,12 @@
         </PanelFrame>
     
     
-        <PanelFrame name="Bakery" dimensions="width:50%; height:50%; center-y:50%; center-x:50%;" permanent="true" visible="true" depth="10">
+        <PanelFrame name="Bakery" dimensions="center-y:50%; center-x:50%; width:50%; height:50%;" permanent="true" visible="true" depth="10">
             <Children>
                 <!--
                 <StillArt name="Background" dimensions="dock:fill" style="texture:colors; region:white; tint:#000000; alpha:0.3;"/>
                 -->
-                <Group id="PieContainer" dimensions="dock:fill"/>
+                <Group id="PieContainer" dimensions="dock:fill"/> <!-- center-y:50%; center-x:50%; width:100%; height:100%; -->
             </Children>
         </PanelFrame>
 

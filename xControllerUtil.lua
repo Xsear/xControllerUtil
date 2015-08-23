@@ -760,6 +760,7 @@ end
 
 -- Based on CreateSegWheel from Arkii's Invii <3
 function CreatePie(PARENT, segmentData)
+    Debug.Log("Creating Container")
     local cont = Component.CreateWidget('<Group blueprint="Pie" dimensions="width:50%; height:50%; center-y:50%; center-x:50%;"></Group>', PARENT)
     local numberOfSegments = 4
     local perSegPrecent = (100/numberOfSegments)
