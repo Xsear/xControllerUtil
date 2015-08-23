@@ -14,14 +14,12 @@
 
     <Events>
         <!-- Firefall -->
-        <Event name="ON_COMPONENT_LOAD"            bind="OnComponentLoad"     />
-    
-        <Event name="ON_PLAYER_READY"              bind="OnPlayerReady" />
-    
-        <Event name="ON_ABILITY_USED"              bind="OnAbilityUsed" />
-        <Event name="ON_ABILITY_FAILED"            bind="OnAbilityFailed" />
-        <Event name="ON_PLACE_CALLDOWN"            bind="OnPlaceCalldown" />
-
+        <Event name="ON_COMPONENT_LOAD"            bind="OnComponentLoad"       />
+        <Event name="ON_PLAYER_READY"              bind="OnPlayerReady"         />
+        <Event name="ON_ABILITY_USED"              bind="OnAbilityUsed"         />
+        <Event name="ON_ABILITY_FAILED"            bind="OnAbilityFailed"       />
+        <Event name="ON_PLACE_CALLDOWN"            bind="OnPlaceCalldown"       />
+        <Event name="ON_BATTLEFRAME_CHANGED"       bind="OnBattleframeChanged"  />
     </Events>
 
 

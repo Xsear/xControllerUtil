@@ -91,8 +91,8 @@ function SetupOptionsUI()
 
     -- Setup tabs
     OptionsUI.TABS = Tabs.Create(2, OptionsUI.PANES)
-    OptionsUI.TABS:SetTab(1, {label="Main"})
-    OptionsUI.TABS:SetTab(2, {label="Second"})
+    OptionsUI.TABS:SetTab(1, {label="Pie Config"})
+    OptionsUI.TABS:SetTab(2, {label="Bindings"})
 
     -- Setup tab references
     OptionsUI.PANE_MAIN = OptionsUI.TABS:GetBody(1)
@@ -107,13 +107,14 @@ function SetupOptionsUI()
     OptionsUI.PANE_MAIN_MAIN_AREA = OptionsUI.PANE_MAIN_LAYOUT:GetChild("MainArea")
     OptionsUI.PANE_MAIN_MAIN_AREA_LIST = OptionsUI.PANE_MAIN_MAIN_AREA:GetChild("List")
 
-    -- Create (bare) layout for Second Pane
-    OptionsUI.PANE_SECOND_LAYOUT = Component.CreateWidget("PaneLayoutMain", OptionsUI.PANE_SECOND)
 
     -- Test button
     function TestButtonAction(args)
         Debug.Table("TestButtonAction", args)
-        --RedBand.GenericMessage("You pressed the Test Button :D")
+        Debug.Log("Is args.widget widget? : ", tostring(Component.IsWidget(args.widget)))
+
+        Debug.Log("This was button with id : ", args.widget:GetName())
+
 
         if not OptionsUI.POPUP then
             OptionsUI.POPUP = RoundedPopupWindow.Create(OptionsUI.PANE_MAIN_LEFT_COLUMN)
@@ -173,8 +174,15 @@ function SetupOptionsUI()
 
     end
 
-    OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON = Component.CreateWidget('<Button id="BindAbilityButton" key="{Bind Ability Pie}" dimensions="left:10.25; width:142; top:5%; height:25"/>', OptionsUI.PANE_MAIN_LEFT_COLUMN)
+    OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON = Component.CreateWidget('<Button id="BindAbilityButton" key="{Bind Ability Pie}" dimensions="left:10.25; width:100%-20.5; top:5%; height:75"/>', OptionsUI.PANE_MAIN_LEFT_COLUMN)
     OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON:BindEvent("OnMouseDown", TestButtonAction)
+
+    OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON = Component.CreateWidget('<Button id="BindAbilityButton" key="{Bind Ability Pie}" dimensions="left:10.25; width:100%-20.5; top:5%; height:75"/>', OptionsUI.PANE_MAIN_LEFT_COLUMN)
+    OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON:BindEvent("OnMouseDown", TestButtonAction)
+
+
+    -- Create layout for Second Pane
+    OptionsUI.PANE_SECOND_LAYOUT = Component.CreateWidget("PaneLayoutMain", OptionsUI.PANE_SECOND)
 
 
 end
@@ -263,6 +271,9 @@ HardCodedCalldownPies = {
 
 IsCalldownPieActive = false
 CurrentlyActiveCalldownPie = nil
+
+
+NotificationsSINTriggerTimestamp = nil
 
 -- ------------------------------------------
 -- INTERFACE OPTIONS
@@ -367,47 +378,74 @@ function OnSlashGamepad(args)
     DetectActiveGamepad()
 end
 
-
 function OnPlayerReady(args)
+    UpdateAbilities(args)
+end
 
-    Debug.Event(args)
+function OnBattleframeChanged(args)
+    UpdateAbilities(args)
+end
 
-    local abilities = Player.GetAbilities().slotted
-    Debug.Table("abilities", abilities)
-    --[[
+function OnAbilityUsed(args)
 
-    
-    Debug.Divider()
-    for i, abilityId in ipairs(abilities) do
-        local abilityInfo = Player.GetAbilityInfo(abilityId)
-        Debug.Table("abilityInfo for " .. tostring(abilityId), abilityInfo)
-        Debug.Divider()
-    end
-    --]]
-
-    -- Setup pies! I don't even like pie.
-    if true then
-        local segmentData = {}
-        for _, ability in ipairs(abilities) do
-            local abilityInfo = Player.GetAbilityInfo(ability.abilityId)
-            table.insert(segmentData, {icon_id = abilityInfo.iconId})
+    -- Catch SIN activation
+    if tostring(args.id) == "43" then
+        -- Only with gamepad
+        if Player.IsUsingGamepad() then
+            -- Ensure timestam set
+            if NotificationsSINTriggerTimestamp ~= nil then
+                if System.GetElapsedUnixTime(NotificationsSINTriggerTimestamp) == 0 then
+                    TriggerNotificationUI()
+                end
+            end
+            NotificationsSINTriggerTimestamp = System.GetLocalUnixTime()
         end
 
-        PIE_CONTAINER:Show(true)
-        PIE_Abilities = CreatePie(PIE_CONTAINER, segmentData)
-        PIE_Abilities:Show(false)
+    -- Normal logic
+    else
+        AbilityPieDeactivationTrigger(args)
     end
 
-    Debug.Log("Creating calldown pies")
+end
+
+function OnAbilityFailed(args)
+    AbilityPieDeactivationTrigger(args)
+end
+
+function OnPlaceCalldown(args)
+    AbilityPieDeactivationTrigger(args)
+end
+
+function UpdateAbilities(args)
+    Debug.Event(args)
+
+    -- Clear exisiting data
+    abilities = nil
+
+    -- Get current abilities
+    local abilities = Player.GetAbilities().slotted
+
+    -- Setup pies! I don't even like pie.
+    local segmentData = {}
+    for _, ability in ipairs(abilities) do
+        local abilityInfo = Player.GetAbilityInfo(ability.abilityId)
+        table.insert(segmentData, {icon_id = abilityInfo.iconId})
+    end
+
+    PIE_CONTAINER:Show(true)
+    PIE_Abilities = CreatePie(PIE_CONTAINER, segmentData)
+    PIE_Abilities:Show(false)
+
+    Debug.Log("Creating Calldown Pies")
 
     for name, content in pairs(HardCodedCalldownPies) do
-        Debug.Table("Creating segmentData for " .. tostring(name), content)
+        --Debug.Table("Creating segmentData for " .. tostring(name), content)
         local segmentData = {}
         for i, keycode in ipairs(ABILITY_PIE_KEYBINDINGS_ORDER) do
 
             local calldownTypeId = content[keycode]
 
-            Debug.Log("Lap keycode ", keycode, " calldownTypeId ", calldownTypeId, " in content.")
+            --Debug.Log("Lap keycode ", keycode, " calldownTypeId ", calldownTypeId, " in content.")
             local itemTypeInfo = Game.GetItemInfoByType(calldownTypeId)
             local icon_id = 0
             if itemTypeInfo then
@@ -421,18 +459,7 @@ function OnPlayerReady(args)
         BAKERY_Calldowns[name].PIE:Show(false)
     end
 
-end
-
-function OnAbilityUsed(args)
-    AbilityPieDeactivationTrigger(args)
-end
-
-function OnAbilityFailed(args)
-    AbilityPieDeactivationTrigger(args)
-end
-
-function OnPlaceCalldown(args)
-    AbilityPieDeactivationTrigger(args)
+    Debug.Log("Calldown Pies Baked")
 end
 
 function AbilityPieDeactivationTrigger(args)
@@ -725,6 +752,10 @@ function DetectActiveGamepad(args)
     end
 end
 
+function TriggerNotificationUI(args)
+    Component.GenerateEvent("MY_NOTIFICATION_TOGGLE", {show=true})
+end
+
 
 
 -- Based on CreateSegWheel from Arkii's Invii <3
@@ -962,7 +993,7 @@ end
 
 function Output(text)
     local args = {
-        text = tostring(text),
+        text = "[xCU] " .. tostring(text),
     }
 
     ChatLib.SystemMessage(args);
