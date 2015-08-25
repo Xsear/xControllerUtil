@@ -91,7 +91,7 @@ function SetupOptionsUI()
 
     -- Setup tabs
     OptionsUI.TABS = Tabs.Create(2, OptionsUI.PANES)
-    OptionsUI.TABS:SetTab(1, {label="Pie Config"})
+    OptionsUI.TABS:SetTab(1, {label="Pizza Config"})
     OptionsUI.TABS:SetTab(2, {label="Bindings"})
 
     -- Setup tab references
@@ -128,7 +128,7 @@ function SetupOptionsUI()
             local POPUP_BODY = OptionsUI.POPUP:GetBody()
 
             OptionsUI.POPUP_BODY_INPUT_ICON = InputIcon.CreateVisual(POPUP_BODY, "Bind")
-            local previousKeyCode = KEYSET_AbilityPie:GetKeybind("ability_pie") or "blank"
+            local previousKeyCode = KEYSET_AbilityPizza:GetKeybind("ability_pizza") or "blank"
             OptionsUI.POPUP_BODY_INPUT_ICON:SetBind({keycode=previousKeyCode, alt=false}, true)
 
 
@@ -153,8 +153,8 @@ function SetupOptionsUI()
 
 
                 local keyCode = OptionsUI.POPUP_BODY_KEYCATCHER:GetKeyCode()
-                KEYSET_AbilityPie:BindKey("ability_pie", keyCode)
-                Component.SaveSetting("ability_pie_keycode", keyCode)
+                KEYSET_AbilityPizza:BindKey("ability_pizza", keyCode)
+                Component.SaveSetting("ability_pizza_keycode", keyCode)
             end
 
             function OnBindRetry(args)
@@ -174,16 +174,16 @@ function SetupOptionsUI()
 
     end
 
-    OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON = Component.CreateWidget('<Button id="BindAbilityButton" key="{Bind Ability Pie}" dimensions="left:10.25; width:100%-20.5; top:5%; height:75"/>', OptionsUI.PANE_MAIN_LEFT_COLUMN)
+    OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON = Component.CreateWidget('<Button id="BindAbilityButton" key="{Bind Ability Pizza}" dimensions="left:10.25; width:100%-20.5; top:5%; height:75"/>', OptionsUI.PANE_MAIN_LEFT_COLUMN)
     OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON:BindEvent("OnMouseDown", TestButtonAction)
 
-    OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON2 = Component.CreateWidget('<Button id="CreatePieButton" key="{Create Pie}" dimensions="left:10.25; width:100%-20.5; top:5%+100; height:75"/>', OptionsUI.PANE_MAIN_LEFT_COLUMN)
+    OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON2 = Component.CreateWidget('<Button id="CreatePizzaButton" key="{Create Pizza}" dimensions="left:10.25; width:100%-20.5; top:5%+100; height:75"/>', OptionsUI.PANE_MAIN_LEFT_COLUMN)
     --OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON2:BindEvent("OnMouseDown", TestButtonAction)
 
-    OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON3 = Component.CreateWidget('<Button id="EditPieButton" key="{Edit Pie}" dimensions="left:10.25; width:100%-20.5; top:5%+200; height:75"/>', OptionsUI.PANE_MAIN_LEFT_COLUMN)
+    OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON3 = Component.CreateWidget('<Button id="EditPizzaButton" key="{Edit Pizza}" dimensions="left:10.25; width:100%-20.5; top:5%+200; height:75"/>', OptionsUI.PANE_MAIN_LEFT_COLUMN)
     --OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON3:BindEvent("OnMouseDown", TestButtonAction)
 
-    OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON4 = Component.CreateWidget('<Button id="DeletePieButton" key="{Delete Pie}" dimensions="left:10.25; width:100%-20.5; top:5%+300; height:75"/>', OptionsUI.PANE_MAIN_LEFT_COLUMN)
+    OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON4 = Component.CreateWidget('<Button id="DeletePizzaButton" key="{Delete Pizza}" dimensions="left:10.25; width:100%-20.5; top:5%+300; height:75"/>', OptionsUI.PANE_MAIN_LEFT_COLUMN)
     --OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON4:BindEvent("OnMouseDown", TestButtonAction)
 
 
@@ -193,11 +193,11 @@ function SetupOptionsUI()
 
     local listItems = {}
     local countEntries = 0
-    for pieKey, pieContents in pairs(HardCodedCalldownPies) do
+    for pizzaKey, pizzaContents in pairs(HardCodedCalldownPizzas) do
 
         local ENTRY_GROUP = Component.CreateWidget(unicode.format('<Group dimensions="left:20.5; width:100%%-41; top:10%%+%d; height:100"/>', countEntries * 120), OptionsUI.PANE_MAIN_MAIN_AREA_LIST)
         local innerCount = 0
-        for keyCode, itemId in pairs(pieContents) do
+        for keyCode, itemId in pairs(pizzaContents) do
             local w = Component.CreateWidget('<StillArt dimensions="left:10%+'..(innerCount * 25)..'%; width:20%; height:80%; top:20%;" style="texture:colors; region:white; tint:#ff0000; alpha:0.8;"/>', ENTRY_GROUP)
             innerCount = innerCount + 1
         end
@@ -238,70 +238,70 @@ KEYCODE_GAMEPAD_DPAD_DOWN = 267
 KEYCODE_GAMEPAD_DPAD_LEFT = 268
 KEYCODE_GAMEPAD_DPAD_RIGHT = 269
 
-ABILITY_PIE_KEYBINDINGS = {
+ABILITY_PIZZA_KEYBINDINGS = {
     [KEYCODE_GAMEPAD_X] = "SelectAbility1",
     [KEYCODE_GAMEPAD_Y] = "SelectAbility2",
     [KEYCODE_GAMEPAD_B] = "SelectAbility3",
     [KEYCODE_GAMEPAD_A] = "SelectAbility4",
 }
-ABILITY_PIE_KEYBINDINGS_ORDER = {
+ABILITY_PIZZA_KEYBINDINGS_ORDER = {
     [1] = KEYCODE_GAMEPAD_X,
     [2] = KEYCODE_GAMEPAD_Y,
     [3] = KEYCODE_GAMEPAD_B,
     [4] = KEYCODE_GAMEPAD_A,
 }
-ABILITY_PIE_KEYBINDING_INDEX = 3 -- So since each key action can have multiple binds, but the UI options only utilize the first 2, we put our stuff on 3. Putting it on higher litters the savefile with empty slots.
+ABILITY_PIZZA_KEYBINDING_INDEX = 3 -- So since each key action can have multiple binds, but the UI options only utilize the first 2, we put our stuff on 3. Putting it on higher litters the savefile with empty slots.
 
-ABILITY_PIE_CANCELLATION_KEYS = {
+ABILITY_PIZZA_CANCELLATION_KEYS = {
     KEYCODE_GAMEPAD_START, KEYCODE_GAMEPAD_BACK, KEYCODE_GAMEPAD_RIGHT_BUMPER
 }
 
 
-RT_SEG_WIDTH = 1024/3 -- Still used in pie creation!
+RT_SEG_WIDTH = 1024/3 -- Still used in pizza creation!
 
 
 -- ------------------------------------------
 -- GLOBALS
 -- ------------------------------------------
-PIE_CONTAINER = Component.GetWidget("PieContainer")
+PIZZA_CONTAINER = Component.GetWidget("PizzaContainer")
 
 
-KEYSET_AbilityPie = nil
-PIE_Abilities = nil
-IsAbilityPieActive = false
+KEYSET_AbilityPizza = nil
+PIZZA_Abilities = nil
+IsAbilityPizzaActive = false
 VERY_IMPORTANT_OVERRIDEN_KEYBINDS = nil
 
-BAKERY_Calldowns = {} -- a bakery contains pies!
+BAKERY_Calldowns = {} -- a bakery contains pizzas!
 
-KEYSET_PieButtons = nil
+KEYSET_PizzaButtons = nil
 
 
-HardCodedCalldownPies = {
+HardCodedCalldownPizzas = {
 
-    ["TransportPie"] = {
-        [ABILITY_PIE_KEYBINDINGS_ORDER[1]] = 77402, -- Gliderpad
-        [ABILITY_PIE_KEYBINDINGS_ORDER[2]] = 77402,
-        [ABILITY_PIE_KEYBINDINGS_ORDER[3]] = 0, -- rip the dream
-        [ABILITY_PIE_KEYBINDINGS_ORDER[4]] = 136981, -- Elite banner
+    ["TransportPizza"] = {
+        [ABILITY_PIZZA_KEYBINDINGS_ORDER[1]] = 77402, -- Gliderpad
+        [ABILITY_PIZZA_KEYBINDINGS_ORDER[2]] = 77402,
+        [ABILITY_PIZZA_KEYBINDINGS_ORDER[3]] = 0, -- rip the dream
+        [ABILITY_PIZZA_KEYBINDINGS_ORDER[4]] = 136981, -- Elite banner
     },
 
-    ["OtherPie"] = {
-        [ABILITY_PIE_KEYBINDINGS_ORDER[1]] = 30298, -- Ammopack
-        [ABILITY_PIE_KEYBINDINGS_ORDER[2]] = 0,
-        [ABILITY_PIE_KEYBINDINGS_ORDER[3]] = 54003,
-        [ABILITY_PIE_KEYBINDINGS_ORDER[4]] = 0,
+    ["OtherPizza"] = {
+        [ABILITY_PIZZA_KEYBINDINGS_ORDER[1]] = 30298, -- Ammopack
+        [ABILITY_PIZZA_KEYBINDINGS_ORDER[2]] = 0,
+        [ABILITY_PIZZA_KEYBINDINGS_ORDER[3]] = 54003,
+        [ABILITY_PIZZA_KEYBINDINGS_ORDER[4]] = 0,
     },
 
 }
 
 
-IsCalldownPieActive = false
-CurrentlyActiveCalldownPie = nil
+IsCalldownPizzaActive = false
+CurrentlyActiveCalldownPizza = nil
 
 
 NotificationsSINTriggerTimestamp = nil
 
-PieButtonsDisabled = false
+PizzaButtonsDisabled = false
 
 
 -- ------------------------------------------
@@ -326,59 +326,59 @@ function OnComponentLoad(args)
 
 
     -- User Keybinds
-    -- Keyset to trigger ability pie
-    KEYSET_AbilityPie = UserKeybinds.Create()
-    KEYSET_AbilityPie:RegisterAction("ability_pie", ActivateAbilityPie, "press")
-    if Component.GetSetting("ability_pie_keycode") then
-        local keyCode = Component.GetSetting("ability_pie_keycode")
-        KEYSET_AbilityPie:BindKey("ability_pie", keyCode)
+    -- Keyset to trigger ability pizza
+    KEYSET_AbilityPizza = UserKeybinds.Create()
+    KEYSET_AbilityPizza:RegisterAction("ability_pizza", ActivateAbilityPizza, "press")
+    if Component.GetSetting("ability_pizza_keycode") then
+        local keyCode = Component.GetSetting("ability_pizza_keycode")
+        KEYSET_AbilityPizza:BindKey("ability_pizza", keyCode)
     end
-    KEYSET_AbilityPie:Activate(false)
+    KEYSET_AbilityPizza:Activate(false)
 
-    -- Keyset for cancelling ability pie when active
-    KEYSET_AbilityPieCancellation = UserKeybinds.Create()
-    KEYSET_AbilityPieCancellation:RegisterAction("ability_pie_cancel", AbilityPieDeactivationTrigger, "press")
-    for _, keyCode in ipairs(ABILITY_PIE_CANCELLATION_KEYS) do
-        KEYSET_AbilityPieCancellation:BindKey("ability_pie_cancel", keyCode)
+    -- Keyset for cancelling ability pizza when active
+    KEYSET_AbilityPizzaCancellation = UserKeybinds.Create()
+    KEYSET_AbilityPizzaCancellation:RegisterAction("ability_pizza_cancel", AbilityPizzaDeactivationTrigger, "press")
+    for _, keyCode in ipairs(ABILITY_PIZZA_CANCELLATION_KEYS) do
+        KEYSET_AbilityPizzaCancellation:BindKey("ability_pizza_cancel", keyCode)
     end
-    KEYSET_AbilityPieCancellation:Activate(false)
+    KEYSET_AbilityPizzaCancellation:Activate(false)
 
     
 
     --[[
     Early experimental stuff, save for calldowns
 
-    PIE_Abilities_KeyCatcher = Component.CreateWidget("KeyCatcher", PIE_Abilities):GetChild("KeyCatch")
-    PIE_Abilities_KeyCatcher:BindEvent("OnKeyCatch", OnAbilityPieKeyCaught)
+    PIZZA_Abilities_KeyCatcher = Component.CreateWidget("KeyCatcher", PIZZA_Abilities):GetChild("KeyCatch")
+    PIZZA_Abilities_KeyCatcher:BindEvent("OnKeyCatch", OnAbilityPizzaKeyCaught)
     --]]
 
 
 
-    KEYSET_CalldownPies = UserKeybinds.Create()
-    KEYSET_CalldownPies:RegisterAction("calldown_pie_transport", ActivateCalldownPie, "press")
-    KEYSET_CalldownPies:RegisterAction("calldown_pie_other", ActivateCalldownPie, "press")
-    --if Component.GetSetting("ability_pie_keycode") then
-    --    local keyCode = Component.GetSetting("ability_pie_keycode")
-    --    KEYSET_CalldownPies:BindKey("ability_pie", keyCode)
+    KEYSET_CalldownPizzas = UserKeybinds.Create()
+    KEYSET_CalldownPizzas:RegisterAction("calldown_pizza_transport", ActivateCalldownPizza, "press")
+    KEYSET_CalldownPizzas:RegisterAction("calldown_pizza_other", ActivateCalldownPizza, "press")
+    --if Component.GetSetting("ability_pizza_keycode") then
+    --    local keyCode = Component.GetSetting("ability_pizza_keycode")
+    --    KEYSET_CalldownPizzas:BindKey("ability_pizza", keyCode)
     --end
-    KEYSET_CalldownPies:BindKey("calldown_pie_transport", KEYCODE_GAMEPAD_DPAD_RIGHT)
-    KEYSET_CalldownPies:BindKey("calldown_pie_other", KEYCODE_GAMEPAD_DPAD_DOWN)
-    KEYSET_CalldownPies:Activate(false)
+    KEYSET_CalldownPizzas:BindKey("calldown_pizza_transport", KEYCODE_GAMEPAD_DPAD_RIGHT)
+    KEYSET_CalldownPizzas:BindKey("calldown_pizza_other", KEYCODE_GAMEPAD_DPAD_DOWN)
+    KEYSET_CalldownPizzas:Activate(false)
     
 
 
-    KEYSET_CalldownPieButtons = UserKeybinds.Create()
-    KEYSET_CalldownPieButtons:RegisterAction("press_calldown_pie_button", DeactivateCalldownPie, "release")
-    for i, keyCode in ipairs(ABILITY_PIE_KEYBINDINGS_ORDER) do
-        KEYSET_CalldownPieButtons:BindKey("press_calldown_pie_button", keyCode, i)
+    KEYSET_CalldownPizzaButtons = UserKeybinds.Create()
+    KEYSET_CalldownPizzaButtons:RegisterAction("press_calldown_pizza_button", DeactivateCalldownPizza, "release")
+    for i, keyCode in ipairs(ABILITY_PIZZA_KEYBINDINGS_ORDER) do
+        KEYSET_CalldownPizzaButtons:BindKey("press_calldown_pizza_button", keyCode, i)
     end
-    KEYSET_CalldownPieButtons:Activate(false)
+    KEYSET_CalldownPizzaButtons:Activate(false)
 
 
 
     -- Ready
-    KEYSET_AbilityPie:Activate(true)
-    KEYSET_CalldownPies:Activate(true)
+    KEYSET_AbilityPizza:Activate(true)
+    KEYSET_CalldownPizzas:Activate(true)
 end
 
 function OnSlashGeneral(args)
@@ -387,8 +387,8 @@ function OnSlashGeneral(args)
     if args[1] then
 
         if args[1] == 'nuke' then
-            KEYSET_AbilityPie:Destroy()
-            Component.SaveSetting("ability_pie_keycode", nil)
+            KEYSET_AbilityPizza:Destroy()
+            Component.SaveSetting("ability_pizza_keycode", nil)
         
         elseif args[1] == 'sin' then
 
@@ -415,30 +415,30 @@ function OnToggleDefaultUI(args)
     -- Determine whether UI is being shown
     local show = args.visible or args.show or false
 
-    -- If UI is being shown, we must disable ability pies
+    -- If UI is being shown, we must disable ability pizzas
     if show then
 
-        -- If pies are shown, deactivate them
-        AbilityPieDeactivationTrigger(args)
+        -- If pizzas are shown, deactivate them
+        AbilityPizzaDeactivationTrigger(args)
 
         -- Disable activation keybinds
-        KEYSET_AbilityPie:Activate(false)
-        KEYSET_CalldownPies:Activate(false)
+        KEYSET_AbilityPizza:Activate(false)
+        KEYSET_CalldownPizzas:Activate(false)
 
         -- Save a reminder
-        PieButtonsDisabled = true
+        PizzaButtonsDisabled = true
 
-        --Output("Pie Buttons Disabled")
+        --Output("Pizza Buttons Disabled")
 
-    -- If UI is being hidden, we should re-enable ability pies
+    -- If UI is being hidden, we should re-enable ability pizzas
     else
 
-        if PieButtonsDisabled then
-            KEYSET_AbilityPie:Activate(true)
-            KEYSET_CalldownPies:Activate(true)
-            PieButtonsDisabled = false
+        if PizzaButtonsDisabled then
+            KEYSET_AbilityPizza:Activate(true)
+            KEYSET_CalldownPizzas:Activate(true)
+            PizzaButtonsDisabled = false
 
-            --Output("Pie Buttons Enabled")
+            --Output("Pizza Buttons Enabled")
         end
 
     end
@@ -476,17 +476,17 @@ function OnAbilityUsed(args)
 
     -- Normal logic
     else
-        AbilityPieDeactivationTrigger(args)
+        AbilityPizzaDeactivationTrigger(args)
     end
 
 end
 
 function OnAbilityFailed(args)
-    AbilityPieDeactivationTrigger(args)
+    AbilityPizzaDeactivationTrigger(args)
 end
 
 function OnPlaceCalldown(args)
-    AbilityPieDeactivationTrigger(args)
+    AbilityPizzaDeactivationTrigger(args)
 end
 
 function UpdateAbilities(args)
@@ -498,23 +498,23 @@ function UpdateAbilities(args)
     -- Get current abilities
     local abilities = Player.GetAbilities().slotted
 
-    -- Setup pies! I don't even like pie.
+    -- Setup pizzas! I don't even like pizza.
     local segmentData = {}
     for _, ability in ipairs(abilities) do
         local abilityInfo = Player.GetAbilityInfo(ability.abilityId)
         table.insert(segmentData, {icon_id = abilityInfo.iconId})
     end
 
-    PIE_CONTAINER:Show(true)
-    PIE_Abilities = CreatePie(PIE_CONTAINER, segmentData)
-    PIE_Abilities:Show(false)
+    PIZZA_CONTAINER:Show(true)
+    PIZZA_Abilities = CreatePizza(PIZZA_CONTAINER, segmentData)
+    PIZZA_Abilities:Show(false)
 
-    Debug.Log("Creating Calldown Pies")
+    Debug.Log("Creating Calldown Pizzas")
 
-    for name, content in pairs(HardCodedCalldownPies) do
+    for name, content in pairs(HardCodedCalldownPizzas) do
         --Debug.Table("Creating segmentData for " .. tostring(name), content)
         local segmentData = {}
-        for i, keycode in ipairs(ABILITY_PIE_KEYBINDINGS_ORDER) do
+        for i, keycode in ipairs(ABILITY_PIZZA_KEYBINDINGS_ORDER) do
 
             local calldownTypeId = content[keycode]
 
@@ -527,72 +527,72 @@ function UpdateAbilities(args)
             table.insert(segmentData, {icon_id = icon_id, tech_id = calldownTypeId, keycode = keycode})
         end
         BAKERY_Calldowns[name] = {}
-        BAKERY_Calldowns[name].PIE = CreatePie(PIE_CONTAINER, segmentData)
+        BAKERY_Calldowns[name].PIZZA = CreatePizza(PIZZA_CONTAINER, segmentData)
         BAKERY_Calldowns[name].data = segmentData
-        BAKERY_Calldowns[name].PIE:Show(false)
+        BAKERY_Calldowns[name].PIZZA:Show(false)
     end
 
-    Debug.Log("Calldown Pies Baked")
+    Debug.Log("Calldown Pizzas Baked")
 end
 
-function AbilityPieDeactivationTrigger(args)
+function AbilityPizzaDeactivationTrigger(args)
     --Debug.Event(args)
-    if IsAbilityPieActive then
-        DeactivateAbilityPie(args)
-    elseif IsCalldownPieActive then
-        DeactivateCalldownPie(args)
+    if IsAbilityPizzaActive then
+        DeactivateAbilityPizza(args)
+    elseif IsCalldownPizzaActive then
+        DeactivateCalldownPizza(args)
     end
 end
 
-function ActivateAbilityPie(args)
-    assert(not IsAbilityPieActive, "waddafak you do, you can't eat two pies at once")
-    assert(not IsCalldownPieActive, "you buffon")
-    assert(PIE_Abilities, "ehh we got problem")
+function ActivateAbilityPizza(args)
+    assert(not IsAbilityPizzaActive, "waddafak you do, you can't eat two pizzas at once")
+    assert(not IsCalldownPizzaActive, "you buffon")
+    assert(PIZZA_Abilities, "ehh we got problem")
 
     -- Diable activation keybind
-    KEYSET_AbilityPie:Activate(false)
-    KEYSET_AbilityPieCancellation:Activate(true)
+    KEYSET_AbilityPizza:Activate(false)
+    KEYSET_AbilityPizzaCancellation:Activate(true)
 
-    -- Do the crazy ability pie keybind overriding
-    DoTheCrazyAbilityPieKeyBindOverriding()
+    -- Do the crazy ability pizza keybind overriding
+    DoTheCrazyAbilityPizzaKeyBindOverriding()
 
     -- Make some fancy moves
-    PIE_Abilities:SetParam("alpha", 0, 0.1)
-    PIE_Abilities:QueueParam("alpha", 1, 0.25, "ease-in")
-    PIE_Abilities:Show(true)
+    PIZZA_Abilities:SetParam("alpha", 0, 0.1)
+    PIZZA_Abilities:QueueParam("alpha", 1, 0.25, "ease-in")
+    PIZZA_Abilities:Show(true)
 
     -- Show the world!
-    PIE_CONTAINER:Show(true)
+    PIZZA_CONTAINER:Show(true)
 
     -- Baka almost forgot
-    IsAbilityPieActive = true
+    IsAbilityPizzaActive = true
 
-    --Output("Activated Ability Pie")
+    --Output("Activated Ability Pizza")
 end
 
-function DeactivateAbilityPie(args)
-    assert(IsAbilityPieActive, "pluto isn't a planet")
+function DeactivateAbilityPizza(args)
+    assert(IsAbilityPizzaActive, "pluto isn't a planet")
 
-    -- Undo the crazy ability pie keybind overriding
-    UndoTheCrazyAbilityPieKeyBindOverriding()
+    -- Undo the crazy ability pizza keybind overriding
+    UndoTheCrazyAbilityPizzaKeyBindOverriding()
 
     -- Usagi chirichiri~
-    PIE_Abilities:Show(false)
-    PIE_CONTAINER:Show(false)
+    PIZZA_Abilities:Show(false)
+    PIZZA_CONTAINER:Show(false)
 
     -- Re-enable activation keybind
-    KEYSET_AbilityPieCancellation:Activate(false)
-    KEYSET_AbilityPie:Activate(true)
+    KEYSET_AbilityPizzaCancellation:Activate(false)
+    KEYSET_AbilityPizza:Activate(true)
 
     -- Update that thing and RIP keybinds
-    IsAbilityPieActive = false
+    IsAbilityPizzaActive = false
 
-    --Output("Deactivated Ability Pie")
+    --Output("Deactivated Ability Pizza")
 end
 
 
-function DoTheCrazyAbilityPieKeyBindOverriding(args)
-    Debug.Log("Doing the crazy ability pie keybind overriding!")
+function DoTheCrazyAbilityPizzaKeyBindOverriding(args)
+    Debug.Log("Doing the crazy ability pizza keybind overriding!")
 
     -- Get all keybinds
     local keybindCategories = {
@@ -610,13 +610,13 @@ function DoTheCrazyAbilityPieKeyBindOverriding(args)
 
     --Debug.Table("allKeybinds", allKeybinds)
 
-    -- Identify all keybinds that conflict with ability pie keybindings
+    -- Identify all keybinds that conflict with ability pizza keybindings
     Debug.Log("Identifying conflicting keybinds")
     local conflictingKeybinds = {}
     for category, actions in pairs(allKeybinds) do
         for action, slots in pairs(actions) do
             for i, bind in ipairs(slots) do
-                if ABILITY_PIE_KEYBINDINGS[bind.keycode] then
+                if ABILITY_PIZZA_KEYBINDINGS[bind.keycode] then
                     Debug.Log("found conflict!")
                     local conflict = {category=category, action=action, index=i, keycode=bind.keycode}
                     table.insert(conflictingKeybinds, conflict)
@@ -637,9 +637,9 @@ function DoTheCrazyAbilityPieKeyBindOverriding(args)
     end
 
     -- Add our special <3 keybinds
-    Debug.Log("Binding ability pie keybinds")
-    for keycode, action in pairs(ABILITY_PIE_KEYBINDINGS) do
-        System.BindKey("Combat", action, keycode, false, ABILITY_PIE_KEYBINDING_INDEX)
+    Debug.Log("Binding ability pizza keybinds")
+    for keycode, action in pairs(ABILITY_PIZZA_KEYBINDINGS) do
+        System.BindKey("Combat", action, keycode, false, ABILITY_PIZZA_KEYBINDING_INDEX)
     end
 
 
@@ -647,17 +647,17 @@ function DoTheCrazyAbilityPieKeyBindOverriding(args)
     System.ApplyKeyBindings()
 
     -- Well, that is it for the first part of the procedure!
-    Debug.Log("Okay, we're now in the crazy ability pie keybinding override state.")
+    Debug.Log("Okay, we're now in the crazy ability pizza keybinding override state.")
 end
 
 
-function UndoTheCrazyAbilityPieKeyBindOverriding(args)
-    Debug.Log("Okay settle down, we're gonna undo the crazy ability pie keybind overriding now")
+function UndoTheCrazyAbilityPizzaKeyBindOverriding(args)
+    Debug.Log("Okay settle down, we're gonna undo the crazy ability pizza keybind overriding now")
 
-    -- Unbind the special ability pie keybindings
-    Debug.Log("Unbinding ability pie keybindings")
-    for keycode, action in pairs(ABILITY_PIE_KEYBINDINGS) do
-        System.BindKey("Combat", action, 0, false, ABILITY_PIE_KEYBINDING_INDEX)
+    -- Unbind the special ability pizza keybindings
+    Debug.Log("Unbinding ability pizza keybindings")
+    for keycode, action in pairs(ABILITY_PIZZA_KEYBINDINGS) do
+        System.BindKey("Combat", action, 0, false, ABILITY_PIZZA_KEYBINDING_INDEX)
     end
 
     -- OKAY NOW RESTORE THE OLD BINDS BEFORE WE LOSE THEM!!!!
@@ -677,44 +677,44 @@ end
 
 
 
-function ActivateCalldownPie(args)
-    Debug.Table("ActivateCalldownPie", args)
+function ActivateCalldownPizza(args)
+    Debug.Table("ActivateCalldownPizza", args)
 
 
-    if not IsCalldownPieActive and not IsAbilityPieActive then
+    if not IsCalldownPizzaActive and not IsAbilityPizzaActive then
 
-        Debug.Log("Opening calldonw pie")
+        Debug.Log("Opening calldonw pizza")
 
-        KEYSET_CalldownPies:Activate(false)
-        KEYSET_AbilityPieCancellation:Activate(true)
-        KEYSET_CalldownPieButtons:Activate(true)
+        KEYSET_CalldownPizzas:Activate(false)
+        KEYSET_AbilityPizzaCancellation:Activate(true)
+        KEYSET_CalldownPizzaButtons:Activate(true)
 
-        CurrentlyActiveCalldownPie = ( (args.name == "calldown_pie_transport" and "TransportPie") or (args.name == "calldown_pie_other" and "OtherPie"))
-        Debug.Log("CurrentlyActiveCalldownPie: ", CurrentlyActiveCalldownPie)
-        IsCalldownPieActive = true
+        CurrentlyActiveCalldownPizza = ( (args.name == "calldown_pizza_transport" and "TransportPizza") or (args.name == "calldown_pizza_other" and "OtherPizza"))
+        Debug.Log("CurrentlyActiveCalldownPizza: ", CurrentlyActiveCalldownPizza)
+        IsCalldownPizzaActive = true
 
-        BAKERY_Calldowns[CurrentlyActiveCalldownPie].PIE:SetParam("alpha", 0, 0.1)
-        BAKERY_Calldowns[CurrentlyActiveCalldownPie].PIE:QueueParam("alpha", 1, 0.25, "ease-in")
-        BAKERY_Calldowns[CurrentlyActiveCalldownPie].PIE:Show(true)
-        PIE_CONTAINER:Show(true)
+        BAKERY_Calldowns[CurrentlyActiveCalldownPizza].PIZZA:SetParam("alpha", 0, 0.1)
+        BAKERY_Calldowns[CurrentlyActiveCalldownPizza].PIZZA:QueueParam("alpha", 1, 0.25, "ease-in")
+        BAKERY_Calldowns[CurrentlyActiveCalldownPizza].PIZZA:Show(true)
+        PIZZA_CONTAINER:Show(true)
 
     end
 end
 
-function DeactivateCalldownPie(args)
-    Debug.Table("DeactivateCalldownPie", args)
+function DeactivateCalldownPizza(args)
+    Debug.Table("DeactivateCalldownPizza", args)
 
 
-    if IsCalldownPieActive then
+    if IsCalldownPizzaActive then
 
 
-        Debug.Log("Closing calldown pie")
+        Debug.Log("Closing calldown pizza")
 
 
         if args.keycode then
 
             -- THis is it, do the thing!
-            local segmentData = BAKERY_Calldowns[CurrentlyActiveCalldownPie].data
+            local segmentData = BAKERY_Calldowns[CurrentlyActiveCalldownPizza].data
 
 
             Debug.Log("Begin attemp to activate calldown")
@@ -786,16 +786,16 @@ function DeactivateCalldownPie(args)
 
 
 
-        BAKERY_Calldowns[CurrentlyActiveCalldownPie].PIE:Show(false)
-        PIE_CONTAINER:Show(false)
+        BAKERY_Calldowns[CurrentlyActiveCalldownPizza].PIZZA:Show(false)
+        PIZZA_CONTAINER:Show(false)
 
 
-        KEYSET_CalldownPieButtons:Activate(false)
-        KEYSET_AbilityPieCancellation:Activate(false)
-        KEYSET_CalldownPies:Activate(true)
+        KEYSET_CalldownPizzaButtons:Activate(false)
+        KEYSET_AbilityPizzaCancellation:Activate(false)
+        KEYSET_CalldownPizzas:Activate(true)
 
-        CurrentlyActiveCalldownPie = nil
-        IsCalldownPieActive = false
+        CurrentlyActiveCalldownPizza = nil
+        IsCalldownPizzaActive = false
     end
 end
 
@@ -832,24 +832,24 @@ end
 
 
 -- Based on CreateSegWheel from Arkii's Invii <3
-function CreatePie(PARENT, segmentData)
+function CreatePizza(PARENT, segmentData)
     Debug.Log("Creating Container")
-    local cont = Component.CreateWidget('<Group blueprint="Pie" dimensions="width:50%; height:50%; center-y:50%; center-x:50%;"></Group>', PARENT)
+    local cont = Component.CreateWidget('<Group blueprint="Pizza" dimensions="width:50%; height:50%; center-y:50%; center-x:50%;"></Group>', PARENT)
     local numberOfSegments = 4
     local perSegPrecent = (100/numberOfSegments)
 
-    Debug.Table("Creating pie with following segmentData: ", segmentData)
+    Debug.Table("Creating pizza with following segmentData: ", segmentData)
 
     for i=1,numberOfSegments do
         local angle = 360 * (perSegPrecent*i)/100 + 90
         local point = GetPointOnCricle(170, 170-24, RT_SEG_WIDTH*0.30, angle)
-        local SEGMENT = Component.CreateWidget(unicode.format('<Group blueprint="KeyPieSegment" dimensions="width:80; height:80; left:%i; top:%i;"></Group>', point.x-20, point.y-20), cont)
+        local SEGMENT = Component.CreateWidget(unicode.format('<Group blueprint="KeyPizzaSegment" dimensions="width:80; height:80; left:%i; top:%i;"></Group>', point.x-20, point.y-20), cont)
         if (segmentData[i]) then
             SEGMENT:GetChild("icon"):SetIcon(segmentData[i].icon_id)
 
             if segmentData[i].icon_id ~= 0 then
                 local inputIcon = InputIcon.CreateVisual(SEGMENT:GetChild("inputIconGroup"), "Bind")
-                local keyCode = ABILITY_PIE_KEYBINDINGS_ORDER[i]
+                local keyCode = ABILITY_PIZZA_KEYBINDINGS_ORDER[i]
                 inputIcon:SetBind({keycode=keyCode, alt=false}, true)
             end
 
@@ -891,19 +891,19 @@ end
 
 
 
-function OnReleaseAbilityPieButton(args)
+function OnReleaseAbilityPizzaButton(args)
 
     local keyCode = args.keycode
 
-    KEYSET_AbilityPieButtons:Activate(false)
-    KEYSET_AbilityPie:Activate(true)    
+    KEYSET_AbilityPizzaButtons:Activate(false)
+    KEYSET_AbilityPizza:Activate(true)    
 
-    Debug.Table("OnReleaseAbilityPieButton", args)
+    Debug.Table("OnReleaseAbilityPizzaButton", args)
 
 
 
-    Output("OnReleaseAbilityPieButton You pressed " .. System.GetKeycodeString(keyCode) .. " keyCode:" .. tostring(keyCode))
-    PIE_CONTAINER:Show(false)
+    Output("OnReleaseAbilityPizzaButton You pressed " .. System.GetKeycodeString(keyCode) .. " keyCode:" .. tostring(keyCode))
+    PIZZA_CONTAINER:Show(false)
 
 
 Callback2.FireAndForget(function()
@@ -929,9 +929,9 @@ end, nil, 1)
 
 end
 
-function OnAbilityPieKeyCaught(args)
+function OnAbilityPizzaKeyCaught(args)
     
-    PIE_Abilities_KeyCatcher:StopListening() -- Important! Prevents Gamepad input lockup issue
+    PIZZA_Abilities_KeyCatcher:StopListening() -- Important! Prevents Gamepad input lockup issue
     
     local keyCode = args.widget:GetKeyCode()
     
@@ -967,7 +967,7 @@ function OnAbilityPieKeyCaught(args)
 
     -- Ignore some input
     if skipCodes[keyCode] then
-        PIE_Abilities_KeyCatcher:ListenForKey() -- Reactivate keycatcher (not related to above fix)
+        PIZZA_Abilities_KeyCatcher:ListenForKey() -- Reactivate keycatcher (not related to above fix)
 
     -- Accept correct input
     elseif acceptCodes[keyCode] then
@@ -998,14 +998,14 @@ function OnAbilityPieKeyCaught(args)
 
         end, nil, 1)
 
-        PIE_CONTAINER:Show(false)
+        PIZZA_CONTAINER:Show(false)
 
     -- Cancel on other input
     else
             
         Output("Cancelled because you pressed " .. System.GetKeycodeString(keyCode) .. " keyCode:" .. tostring(keyCode))
 
-        PIE_CONTAINER:Show(false)
+        PIZZA_CONTAINER:Show(false)
     end
     
 
@@ -1015,15 +1015,15 @@ function OnAbilityPieKeyCaught(args)
 end
 
 
-function OnPressAbilityPie(args)
+function OnPressAbilityPizza(args)
 
-    KEYSET_AbilityPie:Activate(false)        
-    KEYSET_AbilityPieButtons:Activate(true)
+    KEYSET_AbilityPizza:Activate(false)        
+    KEYSET_AbilityPizzaButtons:Activate(true)
 
     -- activate key catcher
-    --PIE_Abilities_KeyCatcher:ListenForKey()
+    --PIZZA_Abilities_KeyCatcher:ListenForKey()
 
-    Output("ON PRESS ABILITY PIE")
+    Output("ON PRESS ABILITY PIZZA")
 
     
 
@@ -1033,11 +1033,11 @@ function OnPressAbilityPie(args)
         --]]
 
     -- anim
-    PIE_Abilities:SetParam("alpha", 0, 0.1)
-    PIE_Abilities:QueueParam("alpha", 1, 0.25, "ease-in")
+    PIZZA_Abilities:SetParam("alpha", 0, 0.1)
+    PIZZA_Abilities:QueueParam("alpha", 1, 0.25, "ease-in")
 
-    KEYSET_AbilityPieButtons:Activate(true)
-    PIE_CONTAINER:Show(true)
+    KEYSET_AbilityPizzaButtons:Activate(true)
+    PIZZA_CONTAINER:Show(true)
 end
 
 

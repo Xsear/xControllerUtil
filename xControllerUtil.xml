@@ -78,16 +78,16 @@
             </KeyCatcher>
         </BluePrint>
     
-        <BluePrint name="Pie" instantiable="true">
+        <BluePrint name="Pizza" instantiable="true">
             <Group dimensions="width:50%;height:50%;center-x:50%;center-y:50%;" />
         </BluePrint>
 
-         <BluePrint name="PieSegment" instantiable="true">
+         <BluePrint name="PizzaSegment" instantiable="true">
             <Icon name="icon" dimensions="dock:fill" style="fixed-bounds:true; alpha:1;" />
         </BluePrint>
         
     
-        <BluePrint name="KeyPieSegment" instantiable="true">
+        <BluePrint name="KeyPizzaSegment" instantiable="true">
             <Icon name="icon" dimensions="dock:fill" style="fixed-bounds:true; alpha:1;" />
             <Group name="inputIconGroup" dimensions="width:100%;height:100%;top:66%;" />
         </BluePrint>
@@ -134,7 +134,7 @@
                 <!--
                 <StillArt name="Background" dimensions="dock:fill" style="texture:colors; region:white; tint:#000000; alpha:0.3;"/>
                 -->
-                <Group id="PieContainer" dimensions="dock:fill"/> <!-- center-y:50%; center-x:50%; width:100%; height:100%; -->
+                <Group id="PizzaContainer" dimensions="dock:fill"/> <!-- center-y:50%; center-x:50%; width:100%; height:100%; -->
             </Children>
         </PanelFrame>
 
