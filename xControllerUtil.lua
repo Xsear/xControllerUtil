@@ -193,15 +193,26 @@ function SetupOptionsUI()
 
     local listItems = {}
     local countEntries = 0
+
+
     for pizzaKey, pizzaContents in pairs(HardCodedCalldownPizzas) do
 
+        local pizzaWidgets = {}
         local ENTRY_GROUP = Component.CreateWidget(unicode.format('<Group dimensions="left:20.5; width:100%%-41; top:10%%+%d; height:100"/>', countEntries * 120), OptionsUI.PANE_MAIN_MAIN_AREA_LIST)
         local innerCount = 0
         for keyCode, itemId in pairs(pizzaContents) do
-            local w = Component.CreateWidget('<StillArt dimensions="left:10%+'..(innerCount * 25)..'%; width:20%; height:80%; top:20%;" style="texture:colors; region:white; tint:#ff0000; alpha:0.8;"/>', ENTRY_GROUP)
+            local w = Component.CreateWidget('<Group dimensions="left:10%+'..(innerCount * 25)..'%; width:20%; height:80%; top:20%;"><StillArt name="bg" dimensions="dock:fill" style="texture:colors; region:white; tint:#ff0000; alpha:0.8;"/><Icon name="icon" dimensions="dock:fill" style="fixed-bounds:true; alpha:1;" /><FocusBox name="focus" dimensions="dock:fill"><DropTarget name="droptarget" dimensions="dock:fill"/></FocusBox></Group>', ENTRY_GROUP)
             innerCount = innerCount + 1
+
+            SetupPizzaSegmentIcon(pizzaKey, innerCount, w:GetChild("icon"))
+
+            SetupDropFocus(w, pizzaKey, innerCount)
+            SetupDropTarget(w, pizzaKey, innerCount)
+
+            pizzaWidgets[innerCount] = {w=w, icon=w:GetChild("icon")}
         end
         countEntries = countEntries + 1
+        g_pizzaUIReferences[pizzaKey] = pizzaWidgets
     end
 
     --OptionsUI.PANE_MAIN_MAIN_AREA_LIST_CHILD_  
@@ -220,6 +231,8 @@ end
 CVAR_ALLOW_GAMEPAD = "control.allowGamepad"
 REDETECTION_DELAY_SECONDS = 1
 
+DRAG_ORIGIN_CU = "xcontrollerutil"
+DRAG_ORIGIN_ACTIONBAR = "3dactionbar"
 
 KEYCODE_GAMEPAD_START = 270
 KEYCODE_GAMEPAD_BACK = 271
@@ -293,7 +306,7 @@ HardCodedCalldownPizzas = {
     },
 
 }
-
+g_pizzaUIReferences = {}
 
 IsCalldownPizzaActive = false
 CurrentlyActiveCalldownPizza = nil
@@ -1044,22 +1057,182 @@ end
 
 
 
+-- ------------------------------------------
+-- Drag and Drop
+-- ------------------------------------------
+
+
+
+function OnDragDropEnd(args)
+    if (args and args.canceled and args.dragdata and type(args.dragdata) == "string") then
+        local dragdata = jsontotable(args.dragdata);
+        
+        if (dragdata and dragdata.from == DRAG_ORIGIN_ACTIONBAR) then
+            Debug.Event(args)
+        end
+    end
+end
 
 
 
 
 
+function GetPizzaSegment(pizzaName, segmentIndex)
+    local pizza = HardCodedCalldownPizzas[pizzaName]
+    assert(pizza, "who ate my pizza D:")
+    local segment = pizza[ABILITY_PIZZA_KEYBINDINGS_ORDER[segmentIndex]]
+    return segment
+end
+
+
+function GetDragInfoForPizzaSegment(pizzaName, segmentIndex)
+    return tostring({pizza = pizzaName, index = segmentIndex, itemSdbId = GetPizzaSegment(pizzaName, segmentIndex), from = DRAG_ORIGIN_CU})
+end
+
+function PizzaSegmentEmpty(pizzaName, segmentIndex)
+    return (GetPizzaSegment(pizzaName, segmentIndex) == 0)
+end
+
+function SetupDropFocus(w, pizzaName, segmentIndex)
+    local dropFocus = w:GetChild("focus")
+    dropFocus:BindEvent("OnMouseDown", function()
+        if (not PizzaSegmentEmpty(pizzaName, segmentIndex)) then
+            Component.BeginDragDrop("item_sdb_id", GetDragInfoForPizzaSegment(pizzaName, segmentIndex), nil);
+        end
+    end);
+end
+
+
+function SetupDropTarget(w, pizzaName, segmentIndex)
+    Debug.Log("SetupDropTarget")
+
+    local dropTarget = w:GetChild("focus"):GetChild("droptarget")
+    --Debug.Table({isW = Component.IsWidget(w), isDropTarget = Component.IsWidget(dropTarget)})
+
+
+    dropTarget:SetAcceptTypes("item_sdb_id");
+    dropTarget:BindEvent("OnDragDrop", function(args)
+        local dropInfoString = dropTarget:GetDropInfo();
+        local dropInfo = jsontotable(dropInfoString);
+        args.z_dropInfo = dropInfo
+        Debug.Event(args)
+        
+        if dropInfo then
+            -- From self
+            if dropInfo.from == DRAG_ORIGIN_CU then
+                
+                SwapPizzaSegment(pizzaName, segmentIndex, dropInfo.index, dropInfo.pizza)
+
+            -- From actionbar
+            elseif dropInfo.from == DRAG_ORIGIN_ACTIONBAR then
+                Debug.Log("Drop from actionbar!")
+                InsertPizzaSegment(pizzaName, dropInfo.itemSdbId, segmentIndex)
+            
+            -- From unknown!
+            else
+                Debug.Warn("Something was dropped into a droptarget from an unknown source:", dropInfo.from)
+                InsertSegment(dropInfo.itemSdbId, pizzaName, segmentIndex)
+            end
+        end
+        
+        end);
+
+    -- Use args.widget in these :D
+    dropTarget:BindEvent("OnDragEnter", function(args)
+                local widget = args.widget
+                
+                widgetInfo(widget)
+
+                local stillArt = widget:GetParent():GetParent():GetChild("bg")
+                widgetInfo(stillArt)
+
+                stillArt:SetParam("tint", "#00ff00")
+
+        end);
+    dropTarget:BindEvent("OnDragLeave", function(args)
+                local widget = args.widget
+                local stillArt = widget:GetParent():GetParent():GetChild("bg")
+                stillArt:SetParam("tint", "#ff0000")
+        end);
+end
 
 
 
 
+function GetDragInfoForSlot(index)
+    local dragData = {};
+    
+    dragData = GetDragDataForItemSlot(index);
+    
+    return dragData;
+end
 
 
+function GetDragDataForItemSlot(index)
+    -- for dragging consumable slots we need the item sdbid, index, and if it's local (to swap rather than replace)
+    return tostring({index = index, itemSdbId = g_abilityInfo[index].itemInfo.itemTypeId, from = c_ActionbarDragOrigin});
+end
 
 
+function SwapPizzaSegment(fromPizza, fromSegment, toSegment, toPizza)
 
 
+    if (fromSegment and toSegment and fromSegment ~= toSegment) then
+        local item1 = GetPizzaSegment(fromPizza, fromSegment);
+        local item2 = GetPizzaSegment(toPizza, toSegment);
 
+
+        
+        if (item1 and item2) then
+            InsertPizzaSegment(toPizza, item1, toSegment);
+            InsertPizzaSegment(fromPizza, item2, fromSegment);
+        elseif (item1) then
+            InsertPizzaSegment(toPizza, item1, toSegment);
+            EatPizzaSegment(fromPizza, fromSegment)
+        elseif (item2) then
+            InsertPizzaSegment(fromPizza, item2, fromSegment);
+            EatPizzaSegment(toPizza, toSegment)
+        end
+
+    end
+
+
+    UpdateAbilities()
+end
+
+function InsertPizzaSegment(pizzaName, itemTypeId, segmentIndex)
+    Debug.Log("InsertPizzaSegment")
+    local segment = GetPizzaSegment(pizzaName, segmentIndex)
+    local firstSlot = (segment == 0)
+    
+
+    HardCodedCalldownPizzas[pizzaName][ABILITY_PIZZA_KEYBINDINGS_ORDER[segmentIndex]] = itemTypeId
+
+    if firstSlot then
+
+    end
+    SetupPizzaSegmentIcon(pizzaName, segmentIndex)
+
+    UpdateAbilities()
+
+    Debug.Table("HardCodedCalldownPizzas", HardCodedCalldownPizzas)
+end
+
+function EatPizzaSegment(pizzaName, segmentIndex)
+    InsertPizzaSegment(pizzaName, 0, segmentIndex)
+end
+
+
+function SetupPizzaSegmentIcon(pizzaName, segmentIndex, icon)
+    if not PizzaSegmentEmpty(pizzaName, segmentIndex) then
+        local segment = GetPizzaSegment(pizzaName, segmentIndex)
+        local itemTypeInfo = Game.GetItemInfoByType(segment)
+        local iconId = itemTypeInfo.web_icon_id or 0
+        
+        icon = icon or g_pizzaUIReferences[pizzaName][segmentIndex].icon
+        icon:SetIcon(iconId)
+    end
+end
 
 -- ------------------------------------------
 -- UTILITY/RETURN FUNCTIONS
@@ -1079,3 +1252,20 @@ function _table.empty(table)
     end
     return false
 end
+
+
+function widgetInfo(widget)
+    assert(widget)
+    Debug.Log("Widget ", (Component.IsWidget(widget) and "is a widget") or "is not a widget")
+    local name, kind = widget:GetInfo()
+    Debug.Log("WidgetGetInfo", "name", tostring(name), "type", tostring(kind))
+end
+
+
+
+
+
+
+
+
+
