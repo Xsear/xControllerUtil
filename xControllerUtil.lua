@@ -301,6 +301,9 @@ CurrentlyActiveCalldownPie = nil
 
 NotificationsSINTriggerTimestamp = nil
 
+PieButtonsDisabled = false
+
+
 -- ------------------------------------------
 -- INTERFACE OPTIONS
 -- ------------------------------------------
@@ -403,6 +406,50 @@ function OnSlashGamepad(args)
 
     DetectActiveGamepad()
 end
+
+
+
+function OnToggleDefaultUI(args)
+    Debug.Table("OnToggleDefaultUI", args)
+
+    -- Determine whether UI is being shown
+    local show = args.visible or args.show or false
+
+    -- If UI is being shown, we must disable ability pies
+    if show then
+
+        -- If pies are shown, deactivate them
+        AbilityPieDeactivationTrigger(args)
+
+        -- Disable activation keybinds
+        KEYSET_AbilityPie:Activate(false)
+        KEYSET_CalldownPies:Activate(false)
+
+        -- Save a reminder
+        PieButtonsDisabled = true
+
+        --Output("Pie Buttons Disabled")
+
+    -- If UI is being hidden, we should re-enable ability pies
+    else
+
+        if PieButtonsDisabled then
+            KEYSET_AbilityPie:Activate(true)
+            KEYSET_CalldownPies:Activate(true)
+            PieButtonsDisabled = false
+
+            --Output("Pie Buttons Enabled")
+        end
+
+    end
+
+
+
+end
+
+
+
+
 
 function OnPlayerReady(args)
     UpdateAbilities(args)
