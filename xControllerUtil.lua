@@ -61,6 +61,7 @@ end
 
 function OnClose(args)
     Debug.Event(args)
+    ToggleOptionsUI({show=false})
 end
 
 function SetupOptionsUI()
