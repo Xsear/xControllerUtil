@@ -116,8 +116,6 @@ VERY_IMPORTANT_OVERRIDEN_KEYBINDS = nil
 g_IsAbilityPizzaActive = false
 g_IsCalldownPizzaActive = false
 g_CurrentlyActiveCalldownPizza = nil
-g_PizzaButtonsDisabled = false
-
 
 
 
@@ -446,31 +444,27 @@ function OnToggleDefaultUI(args)
     -- If UI is being shown, we must disable ability pizzas
     if show then
 
-        -- If pizzas are shown, deactivate them
+        -- In case pizzas are shown, deactivate them
         AbilityPizzaDeactivationTrigger(args)
 
         -- Disable activation keybinds
         g_KeySet_PizzaActivators:Activate(false)
-
-        -- Save a reminder
-        g_PizzaButtonsDisabled = true
 
         --Output("Pizza Buttons Disabled")
 
     -- If UI is being hidden, we should re-enable ability pizzas
     else
 
-        if g_PizzaButtonsDisabled then
+        -- If pizza action was disabled
+        if not g_KeySet_PizzaActivators:IsActive() then
+            
+            -- Activate activaiton keybinds
             g_KeySet_PizzaActivators:Activate(true)
-            g_PizzaButtonsDisabled = false
 
             --Output("Pizza Buttons Enabled")
         end
 
     end
-
-
-
 end
 
 
