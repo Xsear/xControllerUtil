@@ -128,7 +128,7 @@ function SetupOptionsUI()
             local POPUP_BODY = OptionsUI.POPUP:GetBody()
 
             OptionsUI.POPUP_BODY_INPUT_ICON = InputIcon.CreateVisual(POPUP_BODY, "Bind")
-            local previousKeyCode = KEYSET_AbilityPizza:GetKeybind("ability_pizza") or "blank"
+            local previousKeyCode = g_KeySet_PizzaActivators:GetKeybind("activate_ability_pizza") or "blank"
             OptionsUI.POPUP_BODY_INPUT_ICON:SetBind({keycode=previousKeyCode, alt=false}, true)
 
 
@@ -153,7 +153,7 @@ function SetupOptionsUI()
 
 
                 local keyCode = OptionsUI.POPUP_BODY_KEYCATCHER:GetKeyCode()
-                KEYSET_AbilityPizza:BindKey("ability_pizza", keyCode)
+                g_KeySet_PizzaActivators:BindKey("activate_ability_pizza", keyCode)
                 Component.SaveSetting("ability_pizza_keycode", keyCode)
             end
 
@@ -195,7 +195,7 @@ function SetupOptionsUI()
     local countEntries = 0
 
 
-    for pizzaKey, pizzaContents in pairs(HardCodedCalldownPizzas) do
+    for pizzaKey, pizzaContents in pairs(g_CustomPizzas) do
 
         local pizzaWidgets = {}
         local ENTRY_GROUP = Component.CreateWidget(unicode.format('<Group dimensions="left:20.5; width:100%%-41; top:10%%+%d; height:100"/>', countEntries * 120), OptionsUI.PANE_MAIN_MAIN_AREA_LIST)
@@ -230,6 +230,8 @@ end
 -- ------------------------------------------
 CVAR_ALLOW_GAMEPAD = "control.allowGamepad"
 REDETECTION_DELAY_SECONDS = 1
+
+SIN_ABILITY_ID = "43"
 
 DRAG_ORIGIN_CU = "xcontrollerutil"
 DRAG_ORIGIN_ACTIONBAR = "3dactionbar"
@@ -276,20 +278,38 @@ RT_SEG_WIDTH = 1024/3 -- Still used in pizza creation!
 -- ------------------------------------------
 -- GLOBALS
 -- ------------------------------------------
-PIZZA_CONTAINER = Component.GetWidget("PizzaContainer")
+
+-- Pizza stuff
+w_PIZZA_CONTAINER = Component.GetWidget("PizzaContainer")
+w_PIZZA_Abilities = nil
 
 
-KEYSET_AbilityPizza = nil
-PIZZA_Abilities = nil
-IsAbilityPizzaActive = false
+-- Pizza keysets
+g_KeySet_PizzaActivators = nil
+g_KeySet_PizzaDeactivators = nil
+g_KeySet_CustomPizzaButtons = nil -- Note: Non-custom pizzas will have the same buttons, its just that we need one of these for the custom ones since we don't directly override binds with them.
+
+
+
+
+
+
 VERY_IMPORTANT_OVERRIDEN_KEYBINDS = nil
+g_IsAbilityPizzaActive = false
+g_IsCalldownPizzaActive = false
+g_CurrentlyActiveCalldownPizza = nil
+g_PizzaButtonsDisabled = false
+
+
+
 
 BAKERY_Calldowns = {} -- a bakery contains pizzas!
 
-KEYSET_PizzaButtons = nil
+g_pizzaUIReferences = {} -- this is some super bad stupid hack
 
 
-HardCodedCalldownPizzas = {
+-- Data to be stored elsewhere
+g_CustomPizzas = {
 
     ["TransportPizza"] = {
         [ABILITY_PIZZA_KEYBINDINGS_ORDER[1]] = 77402, -- Gliderpad
@@ -306,21 +326,72 @@ HardCodedCalldownPizzas = {
     },
 
 }
-g_pizzaUIReferences = {}
 
-IsCalldownPizzaActive = false
-CurrentlyActiveCalldownPizza = nil
-
-
-NotificationsSINTriggerTimestamp = nil
-
-PizzaButtonsDisabled = false
+-- Other
+g_NotificationsSINTriggerTimestamp = nil
 
 
 -- ------------------------------------------
 -- INTERFACE OPTIONS
 -- ------------------------------------------
 
+
+
+function SetupUserKeybinds()
+
+    -- g_KeySet_PizzaActivators
+    -- This keyset has one action for each pizza it can activate
+    g_KeySet_PizzaActivators = UserKeybinds.Create()
+    
+        -- Ability Pizza Bind
+        g_KeySet_PizzaActivators:RegisterAction("activate_ability_pizza", ActivateAbilityPizza)
+        if Component.GetSetting("ability_pizza_keycode") then
+            local keyCode = Component.GetSetting("ability_pizza_keycode")
+            g_KeySet_PizzaActivators:BindKey("activate_ability_pizza", keyCode)
+        end
+
+        -- Ported from g_KeySet_PizzaActivators, to be custom pizzas
+        g_KeySet_PizzaActivators:RegisterAction("calldown_pizza_transport", ActivateCalldownPizza)
+        g_KeySet_PizzaActivators:RegisterAction("calldown_pizza_other", ActivateCalldownPizza)
+        g_KeySet_PizzaActivators:BindKey("calldown_pizza_transport", KEYCODE_GAMEPAD_DPAD_RIGHT)
+        g_KeySet_PizzaActivators:BindKey("calldown_pizza_other", KEYCODE_GAMEPAD_DPAD_DOWN)
+
+        -- Disable while creating the rest of the keybinds
+        g_KeySet_PizzaActivators:Activate(false)
+
+
+    -- g_KeySet_PizzaDeactivators
+    -- This keyset is for special buttons that can be pressed when a pizza is active to de-activate it.
+    g_KeySet_PizzaDeactivators = UserKeybinds.Create()
+
+        -- These buttons are hardcoded for now
+        g_KeySet_PizzaDeactivators:RegisterAction("ability_pizza_cancel", AbilityPizzaDeactivationTrigger)
+        for _, keyCode in ipairs(ABILITY_PIZZA_CANCELLATION_KEYS) do
+            g_KeySet_PizzaDeactivators:BindKey("ability_pizza_cancel", keyCode)
+        end
+
+        -- Disable while creating the rest of the keybinds
+        g_KeySet_PizzaDeactivators:Activate(false)
+
+
+    -- g_KeySet_CustomPizzaButtons
+    -- This keyset is used for custom pizzas since we are not replacing default binds with those
+    g_KeySet_CustomPizzaButtons = UserKeybinds.Create()
+
+        -- These buttons are hardcoded for now
+        g_KeySet_CustomPizzaButtons:RegisterAction("press_calldown_pizza_button", DeactivateCalldownPizza, "release")
+        for i, keyCode in ipairs(ABILITY_PIZZA_KEYBINDINGS_ORDER) do
+            g_KeySet_CustomPizzaButtons:BindKey("press_calldown_pizza_button", keyCode, i)
+        end
+
+        -- Disable while creating the rest of the keybinds
+        g_KeySet_CustomPizzaButtons:Activate(false)
+
+
+    -- Ready
+    g_KeySet_PizzaActivators:Activate(true)
+
+end
 
 -- ------------------------------------------
 -- EVENTS
@@ -337,61 +408,9 @@ function OnComponentLoad(args)
     -- Options UI
     SetupOptionsUI()
 
-
     -- User Keybinds
-    -- Keyset to trigger ability pizza
-    KEYSET_AbilityPizza = UserKeybinds.Create()
-    KEYSET_AbilityPizza:RegisterAction("ability_pizza", ActivateAbilityPizza, "press")
-    if Component.GetSetting("ability_pizza_keycode") then
-        local keyCode = Component.GetSetting("ability_pizza_keycode")
-        KEYSET_AbilityPizza:BindKey("ability_pizza", keyCode)
-    end
-    KEYSET_AbilityPizza:Activate(false)
+    SetupUserKeybinds()
 
-    -- Keyset for cancelling ability pizza when active
-    KEYSET_AbilityPizzaCancellation = UserKeybinds.Create()
-    KEYSET_AbilityPizzaCancellation:RegisterAction("ability_pizza_cancel", AbilityPizzaDeactivationTrigger, "press")
-    for _, keyCode in ipairs(ABILITY_PIZZA_CANCELLATION_KEYS) do
-        KEYSET_AbilityPizzaCancellation:BindKey("ability_pizza_cancel", keyCode)
-    end
-    KEYSET_AbilityPizzaCancellation:Activate(false)
-
-    
-
-    --[[
-    Early experimental stuff, save for calldowns
-
-    PIZZA_Abilities_KeyCatcher = Component.CreateWidget("KeyCatcher", PIZZA_Abilities):GetChild("KeyCatch")
-    PIZZA_Abilities_KeyCatcher:BindEvent("OnKeyCatch", OnAbilityPizzaKeyCaught)
-    --]]
-
-
-
-    KEYSET_CalldownPizzas = UserKeybinds.Create()
-    KEYSET_CalldownPizzas:RegisterAction("calldown_pizza_transport", ActivateCalldownPizza, "press")
-    KEYSET_CalldownPizzas:RegisterAction("calldown_pizza_other", ActivateCalldownPizza, "press")
-    --if Component.GetSetting("ability_pizza_keycode") then
-    --    local keyCode = Component.GetSetting("ability_pizza_keycode")
-    --    KEYSET_CalldownPizzas:BindKey("ability_pizza", keyCode)
-    --end
-    KEYSET_CalldownPizzas:BindKey("calldown_pizza_transport", KEYCODE_GAMEPAD_DPAD_RIGHT)
-    KEYSET_CalldownPizzas:BindKey("calldown_pizza_other", KEYCODE_GAMEPAD_DPAD_DOWN)
-    KEYSET_CalldownPizzas:Activate(false)
-    
-
-
-    KEYSET_CalldownPizzaButtons = UserKeybinds.Create()
-    KEYSET_CalldownPizzaButtons:RegisterAction("press_calldown_pizza_button", DeactivateCalldownPizza, "release")
-    for i, keyCode in ipairs(ABILITY_PIZZA_KEYBINDINGS_ORDER) do
-        KEYSET_CalldownPizzaButtons:BindKey("press_calldown_pizza_button", keyCode, i)
-    end
-    KEYSET_CalldownPizzaButtons:Activate(false)
-
-
-
-    -- Ready
-    KEYSET_AbilityPizza:Activate(true)
-    KEYSET_CalldownPizzas:Activate(true)
 end
 
 function OnSlashGeneral(args)
@@ -399,13 +418,7 @@ function OnSlashGeneral(args)
 
     if args[1] then
 
-        if args[1] == 'nuke' then
-            KEYSET_AbilityPizza:Destroy()
-            Component.SaveSetting("ability_pizza_keycode", nil)
-        
-        elseif args[1] == 'sin' then
-
-            Component.GenerateEvent("ON_SIN_VIEW", {})
+        if args[1] == "something" then
 
         end
 
@@ -435,21 +448,19 @@ function OnToggleDefaultUI(args)
         AbilityPizzaDeactivationTrigger(args)
 
         -- Disable activation keybinds
-        KEYSET_AbilityPizza:Activate(false)
-        KEYSET_CalldownPizzas:Activate(false)
+        g_KeySet_PizzaActivators:Activate(false)
 
         -- Save a reminder
-        PizzaButtonsDisabled = true
+        g_PizzaButtonsDisabled = true
 
         --Output("Pizza Buttons Disabled")
 
     -- If UI is being hidden, we should re-enable ability pizzas
     else
 
-        if PizzaButtonsDisabled then
-            KEYSET_AbilityPizza:Activate(true)
-            KEYSET_CalldownPizzas:Activate(true)
-            PizzaButtonsDisabled = false
+        if g_PizzaButtonsDisabled then
+            g_KeySet_PizzaActivators:Activate(true)
+            g_PizzaButtonsDisabled = false
 
             --Output("Pizza Buttons Enabled")
         end
@@ -475,16 +486,22 @@ end
 function OnAbilityUsed(args)
 
     -- Catch SIN activation
-    if tostring(args.id) == "43" then
+    if tostring(args.id) == SIN_ABILITY_ID then
+
         -- Only with gamepad
         if Player.IsUsingGamepad() then
-            -- Ensure timestam set
-            if NotificationsSINTriggerTimestamp ~= nil then
-                if System.GetElapsedUnixTime(NotificationsSINTriggerTimestamp) == 0 then
+            
+            -- If we have a timestamp
+            if g_NotificationsSINTriggerTimestamp ~= nil then
+                
+                -- Compare the elapsed time to check for double tap
+                if System.GetElapsedUnixTime(g_NotificationsSINTriggerTimestamp) == 0 then
                     TriggerNotificationUI()
                 end
             end
-            NotificationsSINTriggerTimestamp = System.GetLocalUnixTime()
+
+            -- Set timestamp
+            g_NotificationsSINTriggerTimestamp = System.GetLocalUnixTime()
         end
 
     -- Normal logic
@@ -518,13 +535,13 @@ function UpdateAbilities(args)
         table.insert(segmentData, {icon_id = abilityInfo.iconId})
     end
 
-    PIZZA_CONTAINER:Show(true)
-    PIZZA_Abilities = CreatePizza(PIZZA_CONTAINER, segmentData)
-    PIZZA_Abilities:Show(false)
+    w_PIZZA_CONTAINER:Show(true)
+    w_PIZZA_Abilities = CreatePizza(w_PIZZA_CONTAINER, segmentData)
+    w_PIZZA_Abilities:Show(false)
 
     Debug.Log("Creating Calldown Pizzas")
 
-    for name, content in pairs(HardCodedCalldownPizzas) do
+    for name, content in pairs(g_CustomPizzas) do
         --Debug.Table("Creating segmentData for " .. tostring(name), content)
         local segmentData = {}
         for i, keycode in ipairs(ABILITY_PIZZA_KEYBINDINGS_ORDER) do
@@ -540,7 +557,7 @@ function UpdateAbilities(args)
             table.insert(segmentData, {icon_id = icon_id, tech_id = calldownTypeId, keycode = keycode})
         end
         BAKERY_Calldowns[name] = {}
-        BAKERY_Calldowns[name].PIZZA = CreatePizza(PIZZA_CONTAINER, segmentData)
+        BAKERY_Calldowns[name].PIZZA = CreatePizza(w_PIZZA_CONTAINER, segmentData)
         BAKERY_Calldowns[name].data = segmentData
         BAKERY_Calldowns[name].PIZZA:Show(false)
     end
@@ -550,55 +567,59 @@ end
 
 function AbilityPizzaDeactivationTrigger(args)
     --Debug.Event(args)
-    if IsAbilityPizzaActive then
+    if g_IsAbilityPizzaActive then
         DeactivateAbilityPizza(args)
-    elseif IsCalldownPizzaActive then
+    elseif g_IsCalldownPizzaActive then
         DeactivateCalldownPizza(args)
     end
 end
 
 function ActivateAbilityPizza(args)
-    assert(not IsAbilityPizzaActive, "waddafak you do, you can't eat two pizzas at once")
-    assert(not IsCalldownPizzaActive, "you buffon")
-    assert(PIZZA_Abilities, "ehh we got problem")
+    assert(not g_IsAbilityPizzaActive, "waddafak you do, you can't eat two pizzas at once")
+    assert(not g_IsCalldownPizzaActive, "you buffon")
+    assert(w_PIZZA_Abilities, "ehh we got problem")
 
     -- Diable activation keybind
-    KEYSET_AbilityPizza:Activate(false)
-    KEYSET_AbilityPizzaCancellation:Activate(true)
+    g_KeySet_PizzaActivators:Activate(false)
+
+    -- Activate deactivation keybind
+    g_KeySet_PizzaDeactivators:Activate(true)
 
     -- Do the crazy ability pizza keybind overriding
     DoTheCrazyAbilityPizzaKeyBindOverriding()
 
     -- Make some fancy moves
-    PIZZA_Abilities:SetParam("alpha", 0, 0.1)
-    PIZZA_Abilities:QueueParam("alpha", 1, 0.25, "ease-in")
-    PIZZA_Abilities:Show(true)
+    w_PIZZA_Abilities:SetParam("alpha", 0, 0.1)
+    w_PIZZA_Abilities:QueueParam("alpha", 1, 0.25, "ease-in")
+    w_PIZZA_Abilities:Show(true)
 
     -- Show the world!
-    PIZZA_CONTAINER:Show(true)
+    w_PIZZA_CONTAINER:Show(true)
 
     -- Baka almost forgot
-    IsAbilityPizzaActive = true
+    g_IsAbilityPizzaActive = true
 
     --Output("Activated Ability Pizza")
 end
 
 function DeactivateAbilityPizza(args)
-    assert(IsAbilityPizzaActive, "pluto isn't a planet")
+    assert(g_IsAbilityPizzaActive, "pluto isn't a planet")
 
     -- Undo the crazy ability pizza keybind overriding
     UndoTheCrazyAbilityPizzaKeyBindOverriding()
 
     -- Usagi chirichiri~
-    PIZZA_Abilities:Show(false)
-    PIZZA_CONTAINER:Show(false)
+    w_PIZZA_Abilities:Show(false)
+    w_PIZZA_CONTAINER:Show(false)
 
-    -- Re-enable activation keybind
-    KEYSET_AbilityPizzaCancellation:Activate(false)
-    KEYSET_AbilityPizza:Activate(true)
+    -- Disable deactivation keyset
+    g_KeySet_PizzaDeactivators:Activate(false)
+    
+    -- Enable activation keyset
+    g_KeySet_PizzaActivators:Activate(true)
 
     -- Update that thing and RIP keybinds
-    IsAbilityPizzaActive = false
+    g_IsAbilityPizzaActive = false
 
     --Output("Deactivated Ability Pizza")
 end
@@ -694,22 +715,22 @@ function ActivateCalldownPizza(args)
     Debug.Table("ActivateCalldownPizza", args)
 
 
-    if not IsCalldownPizzaActive and not IsAbilityPizzaActive then
+    if not g_IsCalldownPizzaActive and not g_IsAbilityPizzaActive then
 
-        Debug.Log("Opening calldonw pizza")
+        Debug.Log("Opening calldown pizza")
 
-        KEYSET_CalldownPizzas:Activate(false)
-        KEYSET_AbilityPizzaCancellation:Activate(true)
-        KEYSET_CalldownPizzaButtons:Activate(true)
+        g_KeySet_PizzaActivators:Activate(false)
+        g_KeySet_PizzaDeactivators:Activate(true)
+        g_KeySet_CustomPizzaButtons:Activate(true)
 
-        CurrentlyActiveCalldownPizza = ( (args.name == "calldown_pizza_transport" and "TransportPizza") or (args.name == "calldown_pizza_other" and "OtherPizza"))
-        Debug.Log("CurrentlyActiveCalldownPizza: ", CurrentlyActiveCalldownPizza)
-        IsCalldownPizzaActive = true
+        g_CurrentlyActiveCalldownPizza = ( (args.name == "calldown_pizza_transport" and "TransportPizza") or (args.name == "calldown_pizza_other" and "OtherPizza"))
+        Debug.Log("g_CurrentlyActiveCalldownPizza: ", g_CurrentlyActiveCalldownPizza)
+        g_IsCalldownPizzaActive = true
 
-        BAKERY_Calldowns[CurrentlyActiveCalldownPizza].PIZZA:SetParam("alpha", 0, 0.1)
-        BAKERY_Calldowns[CurrentlyActiveCalldownPizza].PIZZA:QueueParam("alpha", 1, 0.25, "ease-in")
-        BAKERY_Calldowns[CurrentlyActiveCalldownPizza].PIZZA:Show(true)
-        PIZZA_CONTAINER:Show(true)
+        BAKERY_Calldowns[g_CurrentlyActiveCalldownPizza].PIZZA:SetParam("alpha", 0, 0.1)
+        BAKERY_Calldowns[g_CurrentlyActiveCalldownPizza].PIZZA:QueueParam("alpha", 1, 0.25, "ease-in")
+        BAKERY_Calldowns[g_CurrentlyActiveCalldownPizza].PIZZA:Show(true)
+        w_PIZZA_CONTAINER:Show(true)
 
     end
 end
@@ -718,7 +739,7 @@ function DeactivateCalldownPizza(args)
     Debug.Table("DeactivateCalldownPizza", args)
 
 
-    if IsCalldownPizzaActive then
+    if g_IsCalldownPizzaActive then
 
 
         Debug.Log("Closing calldown pizza")
@@ -727,10 +748,10 @@ function DeactivateCalldownPizza(args)
         if args.keycode then
 
             -- THis is it, do the thing!
-            local segmentData = BAKERY_Calldowns[CurrentlyActiveCalldownPizza].data
+            local segmentData = BAKERY_Calldowns[g_CurrentlyActiveCalldownPizza].data
 
 
-            Debug.Log("Begin attemp to activate calldown")
+            Debug.Log("Begin attempt to activate calldown")
             Debug.Log("Our keycode is " .. tostring(args.keycode) .. " ( " .. System.GetKeycodeString(args.keycode) .. ") ")
             Debug.Table("segmentData", segmentData)
 
@@ -793,22 +814,25 @@ function DeactivateCalldownPizza(args)
                     end
 
                 end
+
+            else
+                Debug.Log("TechId is 0, so either this keycode isnt in the segmentData (user cancelled the pizza) or the slot for this keycode doesnt have a calldown in it at the moment. Eitherway we cant activate anything this time.")
             end
 
         end
 
 
 
-        BAKERY_Calldowns[CurrentlyActiveCalldownPizza].PIZZA:Show(false)
-        PIZZA_CONTAINER:Show(false)
+        BAKERY_Calldowns[g_CurrentlyActiveCalldownPizza].PIZZA:Show(false)
+        w_PIZZA_CONTAINER:Show(false)
 
 
-        KEYSET_CalldownPizzaButtons:Activate(false)
-        KEYSET_AbilityPizzaCancellation:Activate(false)
-        KEYSET_CalldownPizzas:Activate(true)
+        g_KeySet_CustomPizzaButtons:Activate(false)
+        g_KeySet_PizzaDeactivators:Activate(false)
+        g_KeySet_PizzaActivators:Activate(true)
 
-        CurrentlyActiveCalldownPizza = nil
-        IsCalldownPizzaActive = false
+        g_CurrentlyActiveCalldownPizza = nil
+        g_IsCalldownPizzaActive = false
     end
 end
 
@@ -887,176 +911,6 @@ end
 
 
 
-
-
-
-
-
-
-
-
-
-
--- ------------------------------------------
--- Messy early experimental code, use later for calldowns
--- ------------------------------------------
-
-
-
-
-function OnReleaseAbilityPizzaButton(args)
-
-    local keyCode = args.keycode
-
-    KEYSET_AbilityPizzaButtons:Activate(false)
-    KEYSET_AbilityPizza:Activate(true)    
-
-    Debug.Table("OnReleaseAbilityPizzaButton", args)
-
-
-
-    Output("OnReleaseAbilityPizzaButton You pressed " .. System.GetKeycodeString(keyCode) .. " keyCode:" .. tostring(keyCode))
-    PIZZA_CONTAINER:Show(false)
-
-
-Callback2.FireAndForget(function()
-
-
-    -- UNDO SPECIALZ
-    
-    Debug.Log("Doing the bind key thing")
-    System.BindKey("Combat", "SelectAbility1", 0, false, 3)
-    Debug.Log("unbound our button")
-
-
-    -- OKAY NOW RESTORE BEFORE WE LOSE THME :D ya ya
-    Debug.Log("bara baraa restore")
-    for i, conflict in ipairs(VERY_IMPORTANT_OVERRIDEN_KEYBINDS) do
-        System.BindKey(conflict.category, conflict.action, 278, false, conflict.index)
-        Debug.Table("Restoring usagii tachii ", conflict)
-    end
-
-    Output("restoreing stiff")
-    System.ApplyKeyBindings()
-end, nil, 1)
-
-end
-
-function OnAbilityPizzaKeyCaught(args)
-    
-    PIZZA_Abilities_KeyCatcher:StopListening() -- Important! Prevents Gamepad input lockup issue
-    
-    local keyCode = args.widget:GetKeyCode()
-    
-    local leftTrigger = (keyCode == 280)
-    local rightTrigger = (keyCode == 281)
-
-    local gamepadX = (keyCode == 278)
-    local gamepadY = (keyCode == 279)
-    local gamepadB = (keyCode == 277)
-    local gamepadA = (keyCode == 276)
-    local dpadUp = (keyCode    == 266)
-    local dpadRight = (keyCode == 269)
-    local dpadDown = (keyCode  == 267)
-    local dpadLeft = (keyCode  == 268)
-
-    local skipCodes = {
-        [280] = true, -- Left Trigger
-        [281] = true, -- Right Trigger
-    }
-
-    local acceptCodes = {
-        [278] = true, -- gamepadX
-        [279] = true, -- gamepadY
-        [277] = true, -- gamepadB
-        [276] = true, -- gamepadA
-        [266] = true, -- dpadUp
-        [269] = true, -- dpadRight
-        [267] = true, -- dpadDown
-        [268] = true, -- dpadLeft
-    }
-
-    Debug.Log("OnKeyCaught " .. System.GetKeycodeString(keyCode) .. " keyCode:" .. tostring(keyCode))
-
-    -- Ignore some input
-    if skipCodes[keyCode] then
-        PIZZA_Abilities_KeyCatcher:ListenForKey() -- Reactivate keycatcher (not related to above fix)
-
-    -- Accept correct input
-    elseif acceptCodes[keyCode] then
-
-        Output("You pressed " .. System.GetKeycodeString(keyCode) .. " keyCode:" .. tostring(keyCode))
-
-
-
-        Callback2.FireAndForget(function()
-
-
-        -- UNDO SPECIALZ
-        
-        Debug.Log("Doing the bind key thing")
-        System.BindKey("Combat", "SelectAbility1", 0, false, 3)
-        Debug.Log("unbound our button")
-
-
-        -- OKAY NOW RESTORE BEFORE WE LOSE THME :D ya ya
-        Debug.Log("bara baraa restore")
-        for i, conflict in ipairs(VERY_IMPORTANT_OVERRIDEN_KEYBINDS) do
-            System.BindKey(conflict.category, conflict.action, 278, false, conflict.index)
-            Debug.Table("Restoring usagii tachii ", conflict)
-        end
-
-        Output("restoreing stiff")
-        System.ApplyKeyBindings()
-
-        end, nil, 1)
-
-        PIZZA_CONTAINER:Show(false)
-
-    -- Cancel on other input
-    else
-            
-        Output("Cancelled because you pressed " .. System.GetKeycodeString(keyCode) .. " keyCode:" .. tostring(keyCode))
-
-        PIZZA_CONTAINER:Show(false)
-    end
-    
-
-
-
-   
-end
-
-
-function OnPressAbilityPizza(args)
-
-    KEYSET_AbilityPizza:Activate(false)        
-    KEYSET_AbilityPizzaButtons:Activate(true)
-
-    -- activate key catcher
-    --PIZZA_Abilities_KeyCatcher:ListenForKey()
-
-    Output("ON PRESS ABILITY PIZZA")
-
-    
-
-
-    --Debug.Table("keybndings", System.GetKeyBindings("Combat", false))
-        
-        --]]
-
-    -- anim
-    PIZZA_Abilities:SetParam("alpha", 0, 0.1)
-    PIZZA_Abilities:QueueParam("alpha", 1, 0.25, "ease-in")
-
-    KEYSET_AbilityPizzaButtons:Activate(true)
-    PIZZA_CONTAINER:Show(true)
-end
-
-
-
-
-
 -- ------------------------------------------
 -- Drag and Drop
 -- ------------------------------------------
@@ -1078,7 +932,7 @@ end
 
 
 function GetPizzaSegment(pizzaName, segmentIndex)
-    local pizza = HardCodedCalldownPizzas[pizzaName]
+    local pizza = g_CustomPizzas[pizzaName]
     assert(pizza, "who ate my pizza D:")
     local segment = pizza[ABILITY_PIZZA_KEYBINDINGS_ORDER[segmentIndex]]
     return segment
@@ -1206,7 +1060,7 @@ function InsertPizzaSegment(pizzaName, itemTypeId, segmentIndex)
     local firstSlot = (segment == 0)
     
 
-    HardCodedCalldownPizzas[pizzaName][ABILITY_PIZZA_KEYBINDINGS_ORDER[segmentIndex]] = itemTypeId
+    g_CustomPizzas[pizzaName][ABILITY_PIZZA_KEYBINDINGS_ORDER[segmentIndex]] = itemTypeId
 
     if firstSlot then
 
@@ -1215,7 +1069,7 @@ function InsertPizzaSegment(pizzaName, itemTypeId, segmentIndex)
 
     UpdateAbilities()
 
-    Debug.Table("HardCodedCalldownPizzas", HardCodedCalldownPizzas)
+    Debug.Table("g_CustomPizzas", g_CustomPizzas)
 end
 
 function EatPizzaSegment(pizzaName, segmentIndex)
@@ -1233,6 +1087,8 @@ function SetupPizzaSegmentIcon(pizzaName, segmentIndex, icon)
         icon:SetIcon(iconId)
     end
 end
+
+
 
 -- ------------------------------------------
 -- UTILITY/RETURN FUNCTIONS
