@@ -557,7 +557,7 @@ function UpdateAbilities(args)
             if itemTypeInfo then
                 icon_id = itemTypeInfo.web_icon_id
             end
-            table.insert(segmentData, {icon_id = icon_id, tech_id = calldownTypeId, keycode = keycode})
+            table.insert(segmentData, {icon_id = icon_id, tech_id = calldownTypeId, keycode = keycode, pizzaName = name})
         end
         BAKERY_Calldowns[name] = {}
         BAKERY_Calldowns[name].PIZZA = CreatePizza(w_PIZZA_CONTAINER, segmentData)
@@ -998,7 +998,7 @@ function SetupDropTarget(w, pizzaName, segmentIndex)
             -- From self
             if dropInfo.from == DRAG_ORIGIN_CU then
                 
-                SwapPizzaSegment(pizzaName, segmentIndex, dropInfo.index, dropInfo.pizza)
+                SwapPizzaSegment(dropInfo.pizza, dropInfo.index, segmentIndex, pizzaName)
 
             -- From actionbar
             elseif dropInfo.from == DRAG_ORIGIN_ACTIONBAR then
@@ -1011,7 +1011,13 @@ function SetupDropTarget(w, pizzaName, segmentIndex)
                 InsertSegment(dropInfo.itemSdbId, pizzaName, segmentIndex)
             end
         end
-        
+
+        -- OnDragLeave
+        local widget = args.widget
+        local stillArt = widget:GetParent():GetParent():GetChild("bg")
+        stillArt:SetParam("tint", "#ff0000")
+        -- -----------
+
         end);
 
     -- Use args.widget in these :D
@@ -1053,49 +1059,50 @@ end
 
 function SwapPizzaSegment(fromPizza, fromSegment, toSegment, toPizza)
 
+    Debug.Table("SwapPizzaSegment", {fromPizza = fromPizza, fromSegment = fromSegment, toSegment = toSegment, toPizza = toPizza})
 
-    if (fromSegment and toSegment and fromSegment ~= toSegment) then
-        local item1 = GetPizzaSegment(fromPizza, fromSegment);
-        local item2 = GetPizzaSegment(toPizza, toSegment);
+    if (fromSegment and toSegment) then
+        local item1 = GetPizzaSegment(fromPizza, fromSegment)
+        local item2 = GetPizzaSegment(toPizza, toSegment)
 
 
-        
-        if (item1 and item2) then
-            InsertPizzaSegment(toPizza, item1, toSegment);
-            InsertPizzaSegment(fromPizza, item2, fromSegment);
-        elseif (item1) then
-            InsertPizzaSegment(toPizza, item1, toSegment);
+        if not PizzaSegmentEmpty(fromPizza, fromSegment) and not PizzaSegmentEmpty(toPizza, toSegment) then
+            Debug.Log("item1 and item2")
+            InsertPizzaSegment(toPizza, item1, toSegment)
+            InsertPizzaSegment(fromPizza, item2, fromSegment)
+        elseif not PizzaSegmentEmpty(fromPizza, fromSegment) then
+            Debug.Log("item1")
+            InsertPizzaSegment(toPizza, item1, toSegment)
             EatPizzaSegment(fromPizza, fromSegment)
-        elseif (item2) then
-            InsertPizzaSegment(fromPizza, item2, fromSegment);
+        elseif not PizzaSegmentEmpty(toPizza, toSegment) then
+            Debug.Log("item2")
+            InsertPizzaSegment(fromPizza, item2, fromSegment)
             EatPizzaSegment(toPizza, toSegment)
         end
 
     end
-
-
-    UpdateAbilities()
 end
 
 function InsertPizzaSegment(pizzaName, itemTypeId, segmentIndex)
     Debug.Log("InsertPizzaSegment")
-    local segment = GetPizzaSegment(pizzaName, segmentIndex)
-    local firstSlot = (segment == 0)
-    
 
+    -- Get segment
+    local segment = GetPizzaSegment(pizzaName, segmentIndex)
+    
+    -- Update pizzas data
     g_CustomPizzas[pizzaName][ABILITY_PIZZA_KEYBINDINGS_ORDER[segmentIndex]] = itemTypeId
 
-    if firstSlot then
-
-    end
-    SetupPizzaSegmentIcon(pizzaName, segmentIndex)
-
+    -- Trigger pizzas to be updated
     UpdateAbilities()
+        
+    -- Update OptionsUI icon
+    SetupPizzaSegmentIcon(pizzaName, segmentIndex)
 
     Debug.Table("g_CustomPizzas", g_CustomPizzas)
 end
 
 function EatPizzaSegment(pizzaName, segmentIndex)
+    Debug.Log("EatPizzaSegment")
     InsertPizzaSegment(pizzaName, 0, segmentIndex)
 end
 
@@ -1107,7 +1114,11 @@ function SetupPizzaSegmentIcon(pizzaName, segmentIndex, icon)
         local iconId = itemTypeInfo.web_icon_id or 0
         
         icon = icon or g_pizzaUIReferences[pizzaName][segmentIndex].icon
+        
         icon:SetIcon(iconId)
+    else
+        icon = icon or g_pizzaUIReferences[pizzaName][segmentIndex].icon
+        icon:ClearIcon()
     end
 end
 
