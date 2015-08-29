@@ -74,6 +74,13 @@ ABILITY_PIZZA_KEYBINDINGS_ORDER = {
     [3] = KEYCODE_GAMEPAD_B,
     [4] = KEYCODE_GAMEPAD_A,
 }
+PIZZA_KEYBINDINGS_KEYCODE_INDEX = {
+    [KEYCODE_GAMEPAD_X] = 1,
+    [KEYCODE_GAMEPAD_Y] = 2,
+    [KEYCODE_GAMEPAD_B] = 3,
+    [KEYCODE_GAMEPAD_A] = 4,
+}
+
 ABILITY_PIZZA_KEYBINDING_INDEX = 3 -- So since each key action can have multiple binds, but the UI options only utilize the first 2, we put our stuff on 3. Putting it on higher litters the savefile with empty slots.
 
 ABILITY_PIZZA_CANCELLATION_KEYS = {
@@ -97,56 +104,96 @@ SUPER_CALLDOWN_PIZZA_KEYBINDINGS = {
 -- GLOBALS
 -- ------------------------------------------
 
--- Pizza stuff
+-- Pizza Data
+g_Pizzas = {
+    ["AbilityPizza"] = {
+        name = "Abilities",
+        key = "AbilityPizza",
+        activationAction = "activate_ability_pizza",
+        enabled = true,
+        isCustom = false,
+        activationType = "ability_override",
+        slots = {
+            [1] = {},
+            [2] = {},
+            [3] = {},
+            [4] = {},
+        },
+        w_PIZZA = nil,
+    },
+    ["TransportPizza"] = {
+        name = "Transport",
+        key = "TransportPizza",
+        activationAction = "activate_transport_pizza",
+        enabled = true,
+        isCustom = true,
+        activationType = "calldown",
+        slots = {
+            [1] = {
+                slotType = "calldown",
+                itemTypeId = 77402, -- Gliderpad
+            },
+            [2] = {
+                slotType = "calldown",
+                itemTypeId = 77402, -- Gliderpad
+            },
+            [3] = {
+                slotType = "empty",
+            },
+            [4] = {
+                slotType = "calldown",
+                itemTypeId = 136981, -- Elite banner
+            },
+        },
+        w_PIZZA = nil,
+    },
+    ["OtherPizza"] = {
+        name = "Other",
+        key = "OtherPizza",
+        activationAction = "activate_other_pizza",
+        enabled = true,
+        isCustom = true,
+        activationType = "calldown",
+        slots = {
+            [1] = {
+                slotType = "calldown",
+                itemTypeId = 30298, -- Gliderpad
+            },
+            [2] = {
+                slotType = "empty",
+            },
+            [3] = {
+                slotType = "calldown",
+                itemTypeId = 54003, -- Detonator
+            },
+            [4] = {
+                slotType = "empty",
+            },
+        },
+        w_PIZZA = nil,
+    },
+}
+
+-- Pizza Widget References
 w_PIZZA_CONTAINER = Component.GetWidget("PizzaContainer")
-w_PIZZA_Abilities = nil
+w_PIZZA_Abilities = g_Pizzas["AbilityPizza"].w_PIZZA -- Shortcut (temp?)
 
-
--- Pizza keysets
+-- Pizza Keysets
 g_KeySet_PizzaActivators = nil
 g_KeySet_PizzaDeactivators = nil
 g_KeySet_CustomPizzaButtons = nil -- Note: Non-custom pizzas will have the same buttons, its just that we need one of these for the custom ones since we don't directly override binds with them.
 
-
-
-
-
-
+-- Other pizza related variables
 VERY_IMPORTANT_OVERRIDEN_KEYBINDS = nil
 g_IsAbilityPizzaActive = false
 g_IsCalldownPizzaActive = false
 g_CurrentlyActiveCalldownPizza = nil
 
-
-
-BAKERY_Calldowns = {} -- a bakery contains pizzas!
-
-g_pizzaUIReferences = {} -- this is some super bad stupid hack
-
-
--- Data to be stored elsewhere
-g_CustomPizzas = {
-
-    ["TransportPizza"] = {
-        [ABILITY_PIZZA_KEYBINDINGS_ORDER[1]] = 77402, -- Gliderpad
-        [ABILITY_PIZZA_KEYBINDINGS_ORDER[2]] = 77402,
-        [ABILITY_PIZZA_KEYBINDINGS_ORDER[3]] = 0, -- rip the dream
-        [ABILITY_PIZZA_KEYBINDINGS_ORDER[4]] = 136981, -- Elite banner
-    },
-
-    ["OtherPizza"] = {
-        [ABILITY_PIZZA_KEYBINDINGS_ORDER[1]] = 30298, -- Ammopack
-        [ABILITY_PIZZA_KEYBINDINGS_ORDER[2]] = 0,
-        [ABILITY_PIZZA_KEYBINDINGS_ORDER[3]] = 54003,
-        [ABILITY_PIZZA_KEYBINDINGS_ORDER[4]] = 0,
-    },
-
-}
-
--- Other
+-- SIN Notification Timestamp
 g_NotificationsSINTriggerTimestamp = nil
 
 
+-- Options UI References
 OptionsUI = {
     MAIN = Component.GetFrame("Options"),
     WINDOW = Component.GetWidget("Window"),
@@ -162,6 +209,7 @@ OptionsUI = {
     PANE_SECOND,
         PANE_SECOND_LAYOUT,
     POPUP,
+    haveSetupBars = false,
 }
 
 
@@ -179,16 +227,15 @@ function OnComponentLoad(args)
     -- Debug
     Debug.EnableLogging(true)
 
-    -- Slash
-    LIB_SLASH.BindCallback({slash_list="xcontrollerutil,xconutil,xcu,cu", description="Controller Utilities", func=OnSlashGeneral})
-    LIB_SLASH.BindCallback({slash_list="redetect,gamepad", description="Attempt to detect active gamepad", func=OnSlashGamepad})
+    -- User Keybinds
+    SetupUserKeybinds()
 
     -- Options UI
     SetupOptionsUI()
 
-    -- User Keybinds
-    SetupUserKeybinds()
-
+    -- Slash
+    LIB_SLASH.BindCallback({slash_list="xcontrollerutil,xconutil,xcu,cu", description="Controller Utilities", func=OnSlashGeneral})
+    LIB_SLASH.BindCallback({slash_list="redetect,gamepad", description="Attempt to detect active gamepad", func=OnSlashGamepad})
 end
 
 function SetupUserKeybinds()
@@ -369,33 +416,28 @@ function SetupOptionsUI()
     --OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON4:BindEvent("OnMouseDown", TestButtonAction)
 
 
-    OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON5 = Component.CreateWidget('<Button id="RescanButton" key="{Rescan Controllers}" dimensions="left:10.25; width:100%-20.5; top:5%+400; height:75"/>', OptionsUI.PANE_MAIN_LEFT_COLUMN)
+    OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON5 = Component.CreateWidget('<Button id="RedetectButton" key="{Redetect Controllers}" dimensions="left:10.25; width:100%-20.5; top:5%+400; height:75"/>', OptionsUI.PANE_MAIN_LEFT_COLUMN)
     OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON5:BindEvent("OnMouseDown", DetectActiveGamepad)
 
 
-    local listItems = {}
-    local countEntries = 0
+
+    -- List
+
+    local DimensionOptions = {
+        ScrollerSpacing = 0,
+        ScrollerSliderMarginVisible = 15,
+        ScrollerSliderMarginHidden = 15,
+    }
+
+    OptionsUI.PANE_MAIN_MAIN_AREA_LIST_ROWSCROLLER = RowScroller.Create(OptionsUI.PANE_MAIN_MAIN_AREA_LIST)
+    OptionsUI.PANE_MAIN_MAIN_AREA_LIST_ROWSCROLLER:SetSlider(Component.CreateWidget('<Slider name="Slider" dimensions="width:3; right:100%; top:0; bottom:100%"/>', OptionsUI.PANE_MAIN_MAIN_AREA_LIST))
+    OptionsUI.PANE_MAIN_MAIN_AREA_LIST_ROWSCROLLER:SetSliderMargin(DimensionOptions.ScrollerSliderMarginVisible, DimensionOptions.ScrollerSliderMarginHidden)
+    OptionsUI.PANE_MAIN_MAIN_AREA_LIST_ROWSCROLLER:SetSpacing(DimensionOptions.ScrollerSpacing)
+    OptionsUI.PANE_MAIN_MAIN_AREA_LIST_ROWSCROLLER:ShowSlider('auto')
+    OptionsUI.PANE_MAIN_MAIN_AREA_LIST_ROWSCROLLER:UpdateSize()
 
 
-    for pizzaKey, pizzaContents in pairs(g_CustomPizzas) do
-
-        local pizzaWidgets = {}
-        local ENTRY_GROUP = Component.CreateWidget(unicode.format('<Group dimensions="left:20.5; width:100%%-41; top:10%%+%d; height:100"/>', countEntries * 120), OptionsUI.PANE_MAIN_MAIN_AREA_LIST)
-        local innerCount = 0
-        for keyCode, itemId in pairs(pizzaContents) do
-            local w = Component.CreateWidget('<Group dimensions="left:10%+'..(innerCount * 25)..'%; width:20%; height:80%; top:20%;"><StillArt name="bg" dimensions="dock:fill" style="texture:colors; region:white; tint:#ff0000; alpha:0.8;"/><Icon name="icon" dimensions="dock:fill" style="fixed-bounds:true; alpha:1;" /><FocusBox name="focus" dimensions="dock:fill"><DropTarget name="droptarget" dimensions="dock:fill"/></FocusBox></Group>', ENTRY_GROUP)
-            innerCount = innerCount + 1
-
-            SetupPizzaSegmentIcon(pizzaKey, innerCount, w:GetChild("icon"))
-
-            SetupDropFocus(w, pizzaKey, innerCount)
-            SetupDropTarget(w, pizzaKey, innerCount)
-
-            pizzaWidgets[innerCount] = {w=w, icon=w:GetChild("icon")}
-        end
-        countEntries = countEntries + 1
-        g_pizzaUIReferences[pizzaKey] = pizzaWidgets
-    end
+    
 
     --OptionsUI.PANE_MAIN_MAIN_AREA_LIST_CHILD_  
 
@@ -405,6 +447,149 @@ function SetupOptionsUI()
 
 
 end
+
+
+  -- New Options bar widget
+    function CreatePizzaBarEntry(pizza) -- from g_Pizzas
+
+        -- Get reference
+        local w_barEntry = Component.CreateWidget('OptionsPizzaBarEntry', OptionsUI.PANE_MAIN_MAIN_AREA_LIST)
+        local w_barContainer = w_barEntry:GetChild("container")
+        local w_barGroup = w_barContainer:GetChild("bar")
+        local w_barHandle = w_barGroup:GetChild("bar_handle")
+        local w_handleLabel = w_barHandle:GetChild("bar_handle_label")
+        local w_handleInputIconGroup = w_barHandle:GetChild("bar_handle_input_icon")
+        local w_barSlots = w_barGroup:GetChild("bar_slots")
+
+        -- Set handle label
+        w_handleLabel:SetText(tostring(pizza.name))
+    
+        -- Set handle input icon
+        w_handleInputIcon = InputIcon.CreateVisual(w_handleInputIconGroup, "Bind")
+        local previousKeyCode = g_KeySet_PizzaActivators:GetKeybind("activate_ability_pizza") or "blank" -- TODO: pizza.activationAction
+        w_handleInputIcon:SetBind({keycode=previousKeyCode, alt=false}, true)
+
+        -- Create slots
+        local slotIcons = {}
+        for i=1,4 do
+            local slotIcon = CreateAbilityIcon(i, i, w_barSlots)
+            slotIcons[i] = slotIcon
+
+            if pizza.isCustom then
+                SetupDropFocus(slotIcon.HOLDER, pizza.key, i)
+                SetupDropTarget(slotIcon.HOLDER, pizza.key, i)
+            end
+            Debug.Table("Calling UpdatePizzaBarSlotIcon", {pizzaKey = pizza.key, i = i})
+            UpdatePizzaBarSlotIcon(pizza.key, i, slotIcon)
+        end
+
+        local abilityFirstIndexHack = (pizza.key == "AbilityPizza" and 1 or nil)
+        OptionsUI.PANE_MAIN_MAIN_AREA_LIST_ROWSCROLLER:AddRow(w_barContainer, abilityFirstIndexHack)
+    
+        return {
+            w_barEntry = w_barEntry,
+            w_barGroup = w_barGroup,
+            w_barHandle = w_barHandle,
+            w_handleLabel = w_handleLabel,
+            w_handleInputIconGroup = w_handleInputIconGroup,
+            w_barSlots = w_barSlots,
+            slotIcons = slotIcons,
+        }
+
+       
+
+    end
+
+
+    function GetPizzaAbilityIconWidget(pizzaIndex, slotIndex) 
+        local pizza = g_Pizzas[pizzaIndex]
+        local slotIcon = pizza.barEntry.slotIcons[slotIndex]
+        local w_ICON = slotIcon.ICONHOLDER:GetChild("icon")
+        return w_ICON
+    end
+
+    function CreateAbilityIcon(slotIndex, pizzaIndex, PARENT)
+        local icon = {ICON=Component.CreateWidget("AbilityIcon", PARENT)};
+        
+        icon.HOLDER = icon.ICON:GetChild("holder");
+        icon.ICONHOLDER = icon.HOLDER:GetChild("icons");
+        icon.NAMEHOLDER = icon.HOLDER:GetChild("abilityname_holder");
+        icon.FOCUS = icon.HOLDER:GetChild("focus");
+        icon.DROPTARGET = icon.FOCUS:GetChild("droptarget");
+        icon.slotIndex = slotIndex;
+        icon.pizzaIndex = pizzaIndex;
+        icon.CONSUMABLE_COUNTER = icon.HOLDER:GetChild("consumable_counter");
+        icon.SELECTION = icon.ICONHOLDER:GetChild("selection");
+        icon.COOLDOWN_COUNTER = icon.ICONHOLDER:GetChild("cooldown_counter");
+        icon.STATE_COUNTER = icon.ICONHOLDER:GetChild("state_counter");
+        icon.COOLDOWN_ARC = icon.ICONHOLDER:GetChild("cooldown");
+        icon.COOLDOWN_BP = icon.ICONHOLDER:GetChild("cooldown_bp");
+        icon.HKM_ARC_BP = icon.ICONHOLDER:GetChild("hkm_arc_bp");
+        icon.HKM_FAIL_BP = icon.ICONHOLDER:GetChild("hkm_fail_bp");
+        icon.HKM_ARC = icon.ICONHOLDER:GetChild("hkm_arc");
+        icon.HKM_GLOW = icon.ICONHOLDER:GetChild("hkm_glow");
+        icon.SCANLINE = icon.ICONHOLDER:GetChild("scanline");
+        icon.ACTIVATION = icon.ICONHOLDER:GetChild("activation");
+        icon.ACTIVATION2 = icon.ICONHOLDER:GetChild("activation2");
+        icon.ITEM_CIRCLE = icon.ICONHOLDER:GetChild("Circle");
+        icon.AHB            = icon.HOLDER:GetChild("attractHookBack");
+        icon.AHF            = icon.HOLDER:GetChild("attractHookFront");
+        icon.LOCK           = icon.HOLDER:GetChild("lock_info")
+        icon.DEPLOY_LIST    = icon.HOLDER:GetChild("deployable_list")
+
+        icon.LOCK:GetChild("lock_text"):SetText("LOCKED")
+        
+        --if (not IsConsumableSlot(globalIndex)) then
+        --    icon.ITEM_CIRCLE:Show(false);
+        --end
+        
+        icon.hideables = {};
+        table.insert(icon.hideables, icon.ICONHOLDER);
+        table.insert(icon.hideables, icon.NAMEHOLDER);
+        table.insert(icon.hideables, icon.CONSUMABLE_COUNTER);
+        table.insert(icon.hideables, icon.FAILURE);
+        
+        icon.hkmOnlyParts = {};
+        table.insert(icon.hkmOnlyParts, icon.HKM_ARC_BP);
+        table.insert(icon.hkmOnlyParts, icon.HKM_FAIL_BP);
+        table.insert(icon.hkmOnlyParts, icon.HKM_ARC);
+        table.insert(icon.hkmOnlyParts, icon.HKM_GLOW);
+        
+        --SetupAbilityIconFocus(icon, globalIndex);
+        --SetupAbilityIconDropTarget(icon, globalIndex);
+        
+        --parent.ICONS[slotIndex] = icon;
+        --w_Slots[globalIndex] = icon;
+        local c_AbiIconOffset = -85
+        local c_AbiIconIncrement = 100
+        local left = c_AbiIconOffset + slotIndex * c_AbiIconIncrement;
+        icon.ICON:SetDims("left:"..tostring(left));
+
+
+    --[[
+
+        local keybindGroup = icon.HOLDER:GetChild("keybind_holder");
+        local shortcut = {keycode=KEYCODE_GAMEPAD_X}
+        if (shortcut) then
+            keybindGroup:Show(true);
+            local keybind = keybindGroup:GetChild("keybind");
+            keybind:SetText(System.GetKeycodeString(shortcut.keycode));
+        else
+            keybindGroup:Show(false);
+        end
+    --]]
+
+        return icon
+    end
+
+    function SetupOptionsUIBarList()
+        -- Create bar entries
+        for pizzaKey, pizza in pairs(g_Pizzas) do
+            pizza.barEntry = CreatePizzaBarEntry(pizza)
+            Debug.Log("barEntry for " .. pizzaKey .. " has been created")
+        end
+    end
+
 
 
 -- ------------------------------------------
@@ -473,6 +658,10 @@ end
 
 function OnPlayerReady(args)
     UpdateAbilities(args)
+    if not OptionsUI.haveSetupBars then
+        SetupOptionsUIBarList()
+        OptionsUI.haveSetupBars = true
+    end
 end
 
 function OnBattleframeChanged(args)
@@ -520,52 +709,100 @@ end
 
 
 
+function UpdatePizzaSlots(pizza)
 
+    if pizza.isCustom then
+        assert(#pizza.slots == 4, "this custom pizza doesnt have 4 slots :s")
+        for slotIndex, slotData in ipairs(pizza.slots) do
+            if not slotData.slotType then
+                slotData.slotType = "empty"
+            elseif slotData.slotType == "calldown" then
+                local itemInfo = Game.GetItemInfoByType(slotData.itemTypeId)
+                if slotData.itemTypeId == 0 or not itemInfo or not next(itemInfo) then
+                    slotData.slotType = "empty"
+                    slotData.itemTypeId = nil
+                    slotData.iconId = nil
+                    slotData.techId = nil
+                else
+                    slotData.iconId = itemInfo.web_icon_id
+                    slotData.techId = slotData.itemTypeId
+                end
+            end
+        end
+    else
 
+        if pizza.activationType == "ability_override" then
+
+            -- Get current abilities
+            local abilities = Player.GetAbilities().slotted
+
+            if not abilities or not next(abilities) then
+                Debug.Warn("Could not get abilities")
+            else
+
+                for slotIndex, slotData in ipairs(pizza.slots) do
+
+                    local ability = abilities[slotIndex]
+                    
+                    if not ability or not next(ability) then
+                        slotData.slotType = "empty"
+                        slotData.iconId = nil
+                    else
+                        local abilityInfo = Player.GetAbilityInfo(ability.abilityId)
+                        slotData.slotType = "ability"
+                        slotData.iconId = abilityInfo.iconId
+                    end
+
+                end
+            end
+
+        end
+
+    end
+
+end
+
+-- Practically UpdatePizzas
 function UpdateAbilities(args)
+    Debug.Divider()
+    Debug.Log("UpdateAbilities Begin")
     Debug.Event(args)
 
     -- Clear exisiting data
-    abilities = nil
+    -- err?
 
-    -- Get current abilities
-    local abilities = Player.GetAbilities().slotted
 
-    -- Setup pizzas! I don't even like pizza.
-    local segmentData = {}
-    for _, ability in ipairs(abilities) do
-        local abilityInfo = Player.GetAbilityInfo(ability.abilityId)
-        table.insert(segmentData, {icon_id = abilityInfo.iconId})
-    end
+    -- New method
+    Debug.Log("It's pizza time!")
+    for pizzaKey, pizza in pairs(g_Pizzas) do
 
-    w_PIZZA_CONTAINER:Show(true)
-    w_PIZZA_Abilities = CreatePizza(w_PIZZA_CONTAINER, segmentData)
-    w_PIZZA_Abilities:Show(false)
+        Debug.Log("Updating " .. pizzaKey)
 
-    Debug.Log("Creating Calldown Pizzas")
+        UpdatePizzaSlots(pizza)
 
-    for name, content in pairs(g_CustomPizzas) do
-        --Debug.Table("Creating segmentData for " .. tostring(name), content)
-        local segmentData = {}
-        for i, keycode in ipairs(ABILITY_PIZZA_KEYBINDINGS_ORDER) do
-
-            local calldownTypeId = content[keycode]
-
-            --Debug.Log("Lap keycode ", keycode, " calldownTypeId ", calldownTypeId, " in content.")
-            local itemTypeInfo = Game.GetItemInfoByType(calldownTypeId)
-            local icon_id = 0
-            if itemTypeInfo then
-                icon_id = itemTypeInfo.web_icon_id
+        pizza.w_PIZZA = {}
+        pizza.w_PIZZA = CreatePizza(w_PIZZA_CONTAINER, pizza.slots)
+        pizza.w_PIZZA:Show(false)
+        
+        if pizza.barEntry then
+            for i, slot in ipairs(pizza.slots) do
+                UpdatePizzaBarSlotIcon(pizzaKey, i, pizza.barEntry.slotIcons[i])
             end
-            table.insert(segmentData, {icon_id = icon_id, tech_id = calldownTypeId, keycode = keycode, pizzaName = name})
         end
-        BAKERY_Calldowns[name] = {}
-        BAKERY_Calldowns[name].PIZZA = CreatePizza(w_PIZZA_CONTAINER, segmentData)
-        BAKERY_Calldowns[name].data = segmentData
-        BAKERY_Calldowns[name].PIZZA:Show(false)
-    end
 
-    Debug.Log("Calldown Pizzas Baked")
+    end 
+
+    -- Update UI
+
+
+    -- Chill hack :D
+    w_PIZZA_Abilities = g_Pizzas["AbilityPizza"].w_PIZZA
+
+    -- Dunno if this is neccessary but w/e
+    w_PIZZA_CONTAINER:Show(true)
+
+    Debug.Log("UpdateAbilities Complete")
+    Debug.Divider()
 end
 
 function AbilityPizzaDeactivationTrigger(args)
@@ -749,9 +986,9 @@ function ActivateCalldownPizza(args)
         Debug.Log("g_CurrentlyActiveCalldownPizza: ", g_CurrentlyActiveCalldownPizza)
         g_IsCalldownPizzaActive = true
 
-        BAKERY_Calldowns[g_CurrentlyActiveCalldownPizza].PIZZA:SetParam("alpha", 0, 0.1)
-        BAKERY_Calldowns[g_CurrentlyActiveCalldownPizza].PIZZA:QueueParam("alpha", 1, 0.25, "ease-in")
-        BAKERY_Calldowns[g_CurrentlyActiveCalldownPizza].PIZZA:Show(true)
+        g_Pizzas[g_CurrentlyActiveCalldownPizza].w_PIZZA:SetParam("alpha", 0, 0.1)
+        g_Pizzas[g_CurrentlyActiveCalldownPizza].w_PIZZA:QueueParam("alpha", 1, 0.25, "ease-in")
+        g_Pizzas[g_CurrentlyActiveCalldownPizza].w_PIZZA:Show(true)
         w_PIZZA_CONTAINER:Show(true)
 
     end
@@ -763,89 +1000,71 @@ function DeactivateCalldownPizza(args)
 
     if g_IsCalldownPizzaActive then
 
-
         Debug.Log("Closing calldown pizza")
-
 
         if args.keycode then
 
-            -- THis is it, do the thing!
-            local segmentData = BAKERY_Calldowns[g_CurrentlyActiveCalldownPizza].data
-
-
-            Debug.Log("Begin attempt to activate calldown")
+            -- This is it, do the thing!
+            Debug.Log("We have a keycode, check if its one of the buttons")
             Debug.Log("Our keycode is " .. tostring(args.keycode) .. " ( " .. System.GetKeycodeString(args.keycode) .. ") ")
-            Debug.Table("segmentData", segmentData)
 
-            local techId = 0
+            local slotIndex = PIZZA_KEYBINDINGS_KEYCODE_INDEX[args.keycode]
 
-            for i, segment in ipairs(segmentData)  do
+            if slotIndex then
 
-                if segment.keycode == args.keycode then
-
-                    techId = segment.tech_id
+                local techId = 0
+                local slotData = g_Pizzas[g_CurrentlyActiveCalldownPizza].slots[slotIndex]
+                if slotData.slotType == "calldown" then
+                    techId = slotData.techId
                     Debug.Log("Found match! Tech id is " .. tostring(techId))
-                    break
                 end
 
-            end
+                if techId ~= 0 then
+                    Debug.Log("Now scannining consumables")
+                    local itemId = nil
+                    local consumables = Player.GetConsumableItems()
+                    Debug.Table("consumables", consumables)
+                    for i, consumable in ipairs(consumables) do
+                        if tonumber(consumable.itemTypeId) == tonumber(techId) then
+                            itemId = consumable.abilityId or consumable.itemId
+                            Debug.Log("Found match! itemId is " .. tostring(itemId))
+                            break
+                        end
+                    end
+                    if itemId ~= nil then
+                        Debug.Log("ActivateTech time!")
+                        Debug.Log("but can we? : Game.CanUIActivateItem ", tostring(Game.CanUIActivateItem(itemId, techId)))
+                        --Player.ActivateTech(itemId, techId)
+                        if Game.CanUIActivateItem(itemId, techId) then
+                            -- TODO: Fix this shit
+                            local FosterFrame = Component.GetFrame("FosterFrame")
+                            local FosteredBackdrop = Component.CreateWidget('<group dimensions="dock:fill;"/>', FosterFrame)
+                            Component.FosterWidget("CursorModeBackdrop:CursorModeBackdrop.{1}", FosteredBackdrop)
+                            FosteredBackdrop:Show(false)
 
-
-
-            if techId ~= 0 then
-
-                Debug.Log("Now scannining consumables")
-
-                local itemId = nil
-                local consumables = Player.GetConsumableItems()
-
-                Debug.Table("consumables", consumables)
-
-
-                for i, consumable in ipairs(consumables) do
-
-                    if tonumber(consumable.itemTypeId) == tonumber(techId) then
-
-                        itemId = consumable.abilityId or consumable.itemId
-                        Debug.Log("Found match! itemId is " .. tostring(itemId))
-                        break
+                            Component.SetInputMode("cursor")
+                            Callback2.FireAndForget(Component.SetInputMode, nil, 0.3) -- saftey
+                            Callback2.FireAndForget(function(args) Player.ActivateTech(args.itemId, args.techId) Component.SetInputMode(nil) FosteredBackdrop:Show(true) end, {itemId=itemId, techId=techId}, 0.1)
+                        end
 
                     end
 
 
-                end
-
-                if itemId ~= nil then
-                    Debug.Log("ActivateTech time!")
-
-                    Debug.Log("but can we? : Game.CanUIActivateItem ", tostring(Game.CanUIActivateItem(itemId, techId)))
-                    --Player.ActivateTech(itemId, techId)
-
-
-                
-                    if Game.CanUIActivateItem(itemId, techId) then
-
-                        local FosterFrame = Component.GetFrame("FosterFrame")
-                        local FosteredBackdrop = Component.CreateWidget('<group dimensions="dock:fill;"/>', FosterFrame)
-                        Component.FosterWidget("CursorModeBackdrop:CursorModeBackdrop.{1}", FosteredBackdrop)
-                        FosteredBackdrop:Show(false)
-
-                        Component.SetInputMode("cursor")
-                        Callback2.FireAndForget(Component.SetInputMode, nil, 0.3) -- saftey
-                        Callback2.FireAndForget(function(args) Player.ActivateTech(args.itemId, args.techId) Component.SetInputMode(nil) FosteredBackdrop:Show(true) end, {itemId=itemId, techId=techId}, 0.1)
-                    end
-
+                else
+                    Debug.Log("TechId is 0, so either this keycode isnt in the segmentData (user cancelled the pizza) or the slot for this keycode doesnt have a calldown in it at the moment. Eitherway we cant activate anything this time.")
                 end
 
             else
-                Debug.Log("TechId is 0, so either this keycode isnt in the segmentData (user cancelled the pizza) or the slot for this keycode doesnt have a calldown in it at the moment. Eitherway we cant activate anything this time.")
+
+                Debug.Log("This keycode wasnt one of the calldown buttons, so do nothing")
+
             end
 
         end
 
 
 
-        BAKERY_Calldowns[g_CurrentlyActiveCalldownPizza].PIZZA:Show(false)
+        g_Pizzas[g_CurrentlyActiveCalldownPizza].w_PIZZA:Show(false)
         w_PIZZA_CONTAINER:Show(false)
 
 
@@ -905,9 +1124,13 @@ function CreatePizza(PARENT, segmentData)
         local point = GetPointOnCricle(170, 170-24, RT_SEG_WIDTH*0.30, angle)
         local SEGMENT = Component.CreateWidget(unicode.format('<Group blueprint="KeyPizzaSegment" dimensions="width:80; height:80; left:%i; top:%i;"></Group>', point.x-20, point.y-20), cont)
         if (segmentData[i]) then
-            SEGMENT:GetChild("icon"):SetIcon(segmentData[i].icon_id)
+            if segmentData[i].type ~= "empty" then
+                SEGMENT:GetChild("icon"):SetIcon(segmentData[i].iconId)
+            else
+                SEGMENT:GetChild("icon"):ClearIcon()
+            end
 
-            if segmentData[i].icon_id ~= 0 then
+            if segmentData[i].type ~= "empty" then
                 local inputIcon = InputIcon.CreateVisual(SEGMENT:GetChild("inputIconGroup"), "Bind")
                 local keyCode = ABILITY_PIZZA_KEYBINDINGS_ORDER[i]
                 inputIcon:SetBind({keycode=keyCode, alt=false}, true)
@@ -915,6 +1138,9 @@ function CreatePizza(PARENT, segmentData)
 
         end
     end
+
+    Debug.Log("Pizza created")
+
     return cont
 end
 
@@ -954,33 +1180,40 @@ end
 
 
 
-function GetPizzaSegment(pizzaName, segmentIndex)
-    local pizza = g_CustomPizzas[pizzaName]
+function GetPizzaSegment(pizzaKey, segmentIndex)
+    --Debug.Table("GetPizzaSegment", {pizzaKey = pizzaKey, segmentIndex = segmentIndex})
+    local pizza = g_Pizzas[pizzaKey]
     assert(pizza, "who ate my pizza D:")
-    local segment = pizza[ABILITY_PIZZA_KEYBINDINGS_ORDER[segmentIndex]]
+    --Debug.Table("pizza", pizza)
+    local segment = pizza.slots[segmentIndex]
+    --Debug.Table("GetPizzaSegment returnining segment", segment)
     return segment
 end
 
 
-function GetDragInfoForPizzaSegment(pizzaName, segmentIndex)
-    return tostring({pizza = pizzaName, index = segmentIndex, itemSdbId = GetPizzaSegment(pizzaName, segmentIndex), from = DRAG_ORIGIN_CU})
+function GetDragInfoForPizzaSegment(pizzaKey, segmentIndex)
+    local slot = GetPizzaSegment(pizzaKey, segmentIndex)
+    assert(slot.slotType == "calldown", "dont know how to get drag info for this slot type (" .. tostring(slot.slotType) .. ")")
+    return tostring({pizza = pizzaKey, index = segmentIndex, itemSdbId = slot.itemTypeId, from = DRAG_ORIGIN_CU})
 end
 
-function PizzaSegmentEmpty(pizzaName, segmentIndex)
-    return (GetPizzaSegment(pizzaName, segmentIndex) == 0)
+function PizzaSegmentEmpty(pizzaKey, segmentIndex)
+    --Debug.Table("PizzaSegmentEmpty", {pizzaKey = pizzaKey, segmentIndex = segmentIndex})
+    local segment = GetPizzaSegment(pizzaKey, segmentIndex)
+    return (segment.slotType == "empty")
 end
 
-function SetupDropFocus(w, pizzaName, segmentIndex)
+function SetupDropFocus(w, pizzaKey, segmentIndex)
     local dropFocus = w:GetChild("focus")
     dropFocus:BindEvent("OnMouseDown", function()
-        if (not PizzaSegmentEmpty(pizzaName, segmentIndex)) then
-            Component.BeginDragDrop("item_sdb_id", GetDragInfoForPizzaSegment(pizzaName, segmentIndex), nil);
+        if (not PizzaSegmentEmpty(pizzaKey, segmentIndex)) then
+            Component.BeginDragDrop("item_sdb_id", GetDragInfoForPizzaSegment(pizzaKey, segmentIndex), nil);
         end
     end);
 end
 
 
-function SetupDropTarget(w, pizzaName, segmentIndex)
+function SetupDropTarget(w, pizzaKey, segmentIndex)
     Debug.Log("SetupDropTarget")
 
     local dropTarget = w:GetChild("focus"):GetChild("droptarget")
@@ -998,24 +1231,25 @@ function SetupDropTarget(w, pizzaName, segmentIndex)
             -- From self
             if dropInfo.from == DRAG_ORIGIN_CU then
                 
-                SwapPizzaSegment(dropInfo.pizza, dropInfo.index, segmentIndex, pizzaName)
+                SwapPizzaSegment(dropInfo.pizza, dropInfo.index, segmentIndex, pizzaKey)
 
             -- From actionbar
             elseif dropInfo.from == DRAG_ORIGIN_ACTIONBAR then
                 Debug.Log("Drop from actionbar!")
-                InsertPizzaSegment(pizzaName, dropInfo.itemSdbId, segmentIndex)
+                InsertPizzaSegment(pizzaKey, dropInfo.itemSdbId, segmentIndex)
             
             -- From unknown!
             else
                 Debug.Warn("Something was dropped into a droptarget from an unknown source:", dropInfo.from)
-                InsertSegment(dropInfo.itemSdbId, pizzaName, segmentIndex)
+                InsertSegment(dropInfo.itemSdbId, pizzaKey, segmentIndex)
             end
         end
 
         -- OnDragLeave
         local widget = args.widget
-        local stillArt = widget:GetParent():GetParent():GetChild("bg")
-        stillArt:SetParam("tint", "#ff0000")
+        Debug.Table("OnDragLeave Widget Info", widgetInfo(widget))
+        local stillArt = widget:GetParent():GetParent():GetChild("iconBackground")
+        stillArt:SetParam("tint", "#000000")
         -- -----------
 
         end);
@@ -1026,7 +1260,7 @@ function SetupDropTarget(w, pizzaName, segmentIndex)
                 
                 widgetInfo(widget)
 
-                local stillArt = widget:GetParent():GetParent():GetChild("bg")
+                local stillArt = widget:GetParent():GetParent():GetChild("iconBackground")
                 widgetInfo(stillArt)
 
                 stillArt:SetParam("tint", "#00ff00")
@@ -1034,14 +1268,14 @@ function SetupDropTarget(w, pizzaName, segmentIndex)
         end);
     dropTarget:BindEvent("OnDragLeave", function(args)
                 local widget = args.widget
-                local stillArt = widget:GetParent():GetParent():GetChild("bg")
-                stillArt:SetParam("tint", "#ff0000")
+                local stillArt = widget:GetParent():GetParent():GetChild("iconBackground")
+                stillArt:SetParam("tint", "#000000")
         end);
 end
 
 
 
-
+--[[
 function GetDragInfoForSlot(index)
     local dragData = {};
     
@@ -1055,6 +1289,7 @@ function GetDragDataForItemSlot(index)
     -- for dragging consumable slots we need the item sdbid, index, and if it's local (to swap rather than replace)
     return tostring({index = index, itemSdbId = g_abilityInfo[index].itemInfo.itemTypeId, from = c_ActionbarDragOrigin});
 end
+--]]
 
 
 function SwapPizzaSegment(fromPizza, fromSegment, toSegment, toPizza)
@@ -1062,8 +1297,8 @@ function SwapPizzaSegment(fromPizza, fromSegment, toSegment, toPizza)
     Debug.Table("SwapPizzaSegment", {fromPizza = fromPizza, fromSegment = fromSegment, toSegment = toSegment, toPizza = toPizza})
 
     if (fromSegment and toSegment) then
-        local item1 = GetPizzaSegment(fromPizza, fromSegment)
-        local item2 = GetPizzaSegment(toPizza, toSegment)
+        local item1 = GetPizzaSegment(fromPizza, fromSegment).itemTypeId
+        local item2 = GetPizzaSegment(toPizza, toSegment).itemTypeId
 
 
         if not PizzaSegmentEmpty(fromPizza, fromSegment) and not PizzaSegmentEmpty(toPizza, toSegment) then
@@ -1083,42 +1318,72 @@ function SwapPizzaSegment(fromPizza, fromSegment, toSegment, toPizza)
     end
 end
 
-function InsertPizzaSegment(pizzaName, itemTypeId, segmentIndex)
+function InsertPizzaSegment(pizzaKey, itemTypeId, segmentIndex)
     Debug.Log("InsertPizzaSegment")
 
     -- Get segment
-    local segment = GetPizzaSegment(pizzaName, segmentIndex)
+    --local segment = GetPizzaSegment(pizzaKey, segmentIndex)
     
     -- Update pizzas data
-    g_CustomPizzas[pizzaName][ABILITY_PIZZA_KEYBINDINGS_ORDER[segmentIndex]] = itemTypeId
+    local slotData = g_Pizzas[pizzaKey].slots[segmentIndex]
+    Debug.Table("pre update slotData", slotData)
+
+    slotData.itemTypeId = itemTypeId
+    
+    if tonumber(itemTypeId) == 0 then -- :s not sure about types here
+        slotData.slotType = "empty"
+    else
+        slotData.slotType = "calldown"
+    end
+
+    -- Save
+    g_Pizzas[pizzaKey].slots[segmentIndex] = slotData
+    Debug.Table("post update slotData", slotData)
 
     -- Trigger pizzas to be updated
-    UpdateAbilities()
+    UpdateAbilities({event="InsertPizzaSegment"})
         
     -- Update OptionsUI icon
-    SetupPizzaSegmentIcon(pizzaName, segmentIndex)
-
-    Debug.Table("g_CustomPizzas", g_CustomPizzas)
+    UpdatePizzaBarSlotIcon(pizzaKey, segmentIndex)
 end
 
-function EatPizzaSegment(pizzaName, segmentIndex)
+function EatPizzaSegment(pizzaKey, segmentIndex)
     Debug.Log("EatPizzaSegment")
-    InsertPizzaSegment(pizzaName, 0, segmentIndex)
+    InsertPizzaSegment(pizzaKey, 0, segmentIndex)
 end
 
 
-function SetupPizzaSegmentIcon(pizzaName, segmentIndex, icon)
-    if not PizzaSegmentEmpty(pizzaName, segmentIndex) then
-        local segment = GetPizzaSegment(pizzaName, segmentIndex)
-        local itemTypeInfo = Game.GetItemInfoByType(segment)
-        local iconId = itemTypeInfo.web_icon_id or 0
-        
-        icon = icon or g_pizzaUIReferences[pizzaName][segmentIndex].icon
-        
-        icon:SetIcon(iconId)
+function UpdatePizzaBarSlotIcon(pizzaKey, segmentIndex, slotIcon)
+
+    if not PizzaSegmentEmpty(pizzaKey, segmentIndex) then
+        local segment = GetPizzaSegment(pizzaKey, segmentIndex)
+
+        if not segment.iconId then
+            Debug.Warn("For some reason UpdatePizzaBarSlotIcon does not have all segment data", {pizzaKey=pizzaKey, segmentIndex=segmentIndex, segment=segment})
+        end
+        local iconId = segment.iconId
+
+        w_ICON = slotIcon and slotIcon.ICONHOLDER:GetChild("icon") or GetPizzaAbilityIconWidget(pizzaKey, segmentIndex)
+        w_ICON:SetIcon(iconId)
+
+        -- fancy extras for the abilities
+        if segment.slotType == "ability" then
+            slotIcon.ITEM_CIRCLE:Show(false)
+
+
+            slotIcon.LOCK:SetParam("alpha", 1)
+            slotIcon.ICONHOLDER:SetParam("alpha", 0.4)
+            
+            local c_HintFadeDur = 0.5
+            slotIcon.LOCK:GetChild("lock"):ParamTo("alpha", .5, c_HintFadeDur, "smooth")
+            slotIcon.LOCK:GetChild("lock"):MoveTo("center-y:35%", c_HintFadeDur, "smooth")
+            slotIcon.LOCK:GetChild("lock_text"):ParamTo("alpha", .8, c_HintFadeDur+.1, "smooth")
+
+        end
+
     else
-        icon = icon or g_pizzaUIReferences[pizzaName][segmentIndex].icon
-        icon:ClearIcon()
+        w_ICON = slotIcon and slotIcon.ICONHOLDER:GetChild("icon") or GetPizzaAbilityIconWidget(pizzaKey, segmentIndex)
+        w_ICON:ClearIcon()
     end
 end
 

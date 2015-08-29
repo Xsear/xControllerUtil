@@ -35,6 +35,16 @@
 
         <Texture name="scanlines" src="./textures/scanLines.png" />
         <Texture name="alpha" src="./textures/alpha.png" />
+
+        <Texture name="3dActionBar" src="components/MainUI/HUD/3dActionBar/3dactionbar.dds" premultiplied="false" minScale="1">
+            <Region name="Actionbar_Selector" leftPadding="true" rightPadding="true" topPadding="true" bottomPadding="true" top="25" bottom="156" left="689" right="820" />
+            <Region name="circle" leftPadding="true" rightPadding="true" topPadding="true" bottomPadding="true" top="170" bottom="210" left="596" right="636" />
+            <Region name="hkm_glow" leftPadding="true" rightPadding="true" topPadding="true" bottomPadding="true" top="25" bottom="160" left="451" right="586" />
+            <Region name="Actionbar_Cooldown" leftPadding="true" rightPadding="true" topPadding="true" bottomPadding="true" top="4" bottom="15" left="451" right="679" />
+            <Region name="burst" top="4" bottom="237" left="4" right="441" />
+            <Region name="circle_consumable" top="25" bottom="151" left="830" right="956" />
+        </Texture>
+
     </Textures>
 
     <Styles>
@@ -70,7 +80,7 @@
             <Group name="LeftColumn" dimensions="left:0; top:0; height:100%; width:25%;" blueprint="Panel" style="alpha:1">
             </Group>
             <Group name="MainArea" dimensions="left:25%+1; top:0; height:100%; width:75%;" blueprint="Panel" style="tint:F94042">
-                <Group name="List" dimensions="width:100%;height:100%-68;top:68;"/>
+                <Group name="List" dimensions="width:100%;height:100%-68;top:8;"/>
             </Group>
         </BluePrint>
 
@@ -92,6 +102,80 @@
             <Icon name="icon" dimensions="dock:fill" style="fixed-bounds:true; alpha:1;" />
             <Group name="inputIconGroup" dimensions="width:100%;height:100%;top:66%;" />
         </BluePrint>
+
+        <BluePrint name="OptionsPizzaBarEntry" instantiable="true">
+            <!-- Outer Group - The full width of the container -->
+            <Group name="container" dimensions="width:100%; top:0; height:100">
+
+                <!-- Inner Container Group - The Bar -->
+                <Group name="bar" dimensions="width:80%; left:10%; height:100%">
+
+                    <!-- The background of the whole bar -->
+                    <StillArt name="bar_background" dimensions="dock:fill" style="texture:colors; region:white; tint:#666666; alpha:0.5;"/>
+    
+                    <!-- The left end of the bar -->
+                    <Group name="bar_handle" dimensions="width:20%;height:100%;left:0;">
+                        <StillArt name="temp_bar_handle" dimensions="dock:fill" style="texture:colors; region:white; tint:#0000bb; alpha:0.5;"/>
+                        <Text name="bar_handle_label" dimensions="width:80%;left:10%;height:20%;top:13%;" style="font:Demi_11; valign:center; halign:center; wrap:false; clip:false; padding:0"/>
+
+                        <Group name="bar_handle_input_icon" dimensions="width:100%;height:80%;top:20%;" />
+                    </Group>
+
+                    <!-- The container for the bar slots -->
+                    <Group name="bar_slots" dimensions="width:80%-40;height:100%;left:20%+40;">
+                        <StillArt name="temp_bar_slots" dimensions="dock:fill" style="texture:colors; region:white; tint:#00ff00; alpha:0.5;"/>
+
+                    </Group>
+
+                </Group>
+
+            </Group>
+        </BluePrint>
+
+        <BluePrint name="OptionsPizzaBarEntrySlot" instantiable="true">
+            
+        </BluePrint>
+
+        <BluePrint name="AbilityIcon" instantiable="true">
+            <Group name="holder" dimensions="width:80; height:80; left:0; top:10">
+                <Group name="attractHookBack" dimensions="dock:fill" />
+                <StillArt name="iconBackground" dimensions="width:100%; height:100%" style="texture:3dActionBar; region:circle; tint:000000; alpha:0.7"/>
+                <Group name="abilityname_holder" dimensions="width:80; height:10; center-x:50%; top:-35%" style="alpha:0">
+                    <StillArt name="name_bg" dimensions="dock:fill" style="texture:colors; region:white; tint:000000; alpha:0.9"/>
+                    <Text name="abilityname" dimensions="dock:fill" style="font:UbuntuBold_11; valign:center; halign:center; clip:false; wrap:false; padding:0; visible:true; color:DDFF00"/>
+                </Group>
+                <Group name="keybind_holder" dimensions="width:10; height:10; center-x:50%; top:120%" style="visible:false">
+                    <Text name="keybind" dimensions="center-x:50%; center-y:50%; width:10; height:10" style="font:Demi_11; valign:center; halign:center; clip:false; wrap:false; padding:0; visible:true; color:FFFFFF; drop-shadow:true;"/>
+                </Group>
+                <Group name="icons" dimensions="width:100%; height:100%">
+                    <StillArt name="selection" dimensions="center-x:50%; center-y:50%; width:150%; height:150%;" style="texture:3dActionBar;region:Actionbar_Selector; tint:FFFF00; visible:false" />
+                    <StillArt name="circle" dimensions="width:130%; height:130%" style="texture:3dActionBar;region:circle_consumable; alpha:0.7"/>
+                    <Icon name="icon" dimensions="dock:fill"/>
+                    
+                    <StillArt name="hkm_glow" dimensions="center-x:50%; center-y:50%; width:180%; height:180%;" style="texture:3dActionBar;region:hkm_glow; tint:02B4E9; visible:false;alpha:0.75" />
+                    <Arc name="cooldown_bp" dimensions="center-x:50%; center-y:50%; width:100%; height:100%;" style="texture:3dActionBar;region:Actionbar_Cooldown;thickness:9;tessellation:33; tint:2A0300; start-angle:180;end-angle:-180;offset:180;shadow:1; visible:false; alpha:0.3"/>
+                    <Arc name="hkm_fail_bp" dimensions="center-x:50%; center-y:50%; width:100%; height:100%;" style="texture:colors;region:white;thickness:6;tessellation:33; tint:FF0000; start-angle:180;end-angle:-180;offset:180;shadow:0; visible:true; alpha:0"/>
+                    <Arc name="hkm_arc_bp" dimensions="center-x:50%; center-y:50%; width:100%; height:100%;" style="texture:colors;region:white;thickness:6;tessellation:33; tint:00242A; start-angle:180;end-angle:-180;offset:180;shadow:0; visible:false"/>
+                    <Arc name="cooldown" dimensions="center-x:50%; center-y:50%; width:100%; height:100%;" style="texture:3dActionBar;region:Actionbar_Cooldown;thickness:9;tessellation:33; tint:FF8800; start-angle:180;end-angle:179;offset:180;shadow:0; visible:false;"/>
+                    <Arc name="hkm_arc" dimensions="center-x:50%; center-y:50%; width:100%; height:100%;" style="texture:colors;region:white;thickness:6;tessellation:33; tint:02B4E9; start-angle:180;end-angle:179;offset:180;shadow:0; visible:false"/>
+                    <TextTimer name="state_counter" dimensions="center-x:50%; center-y:50%; width:10; height:10" style="font:Narrow_26B; valign:center; halign:center; clip:false; wrap:false; padding:0; visible:true; alpha:0; text-color:#00AACC; format:%.1s"/>
+                    <TextTimer name="cooldown_counter" dimensions="center-x:50%; center-y:50%; width:10; height:10" style="font:Narrow_26B; valign:center; halign:center; clip:false; wrap:false; padding:0; visible:true; alpha:0; text-color:#FF8800; format:%.1s"/>
+                    <StillArt name="activation" dimensions="center-x:50%; center-y:50%; width:115%; height:115%;" style="texture:3dActionBar;region:burst; visible:true; alpha:0" />
+                    <StillArt name="activation2" dimensions="center-x:50%; center-y:50%; width:115%; height:115%;" style="texture:3dActionBar;region:burst; visible:true; alpha:0;tint:#ff8800" />
+                </Group>
+                <GlyphMap name="consumable_counter" dimensions="center-x:50%-2; center-y:75%; width:10; height:10" lineheight="28" charset="1234567890" style="texture:glyph_aag; kerning-mult:0.8; halign:center; valign:center;"/>
+                <Group name="lock_info" dimensions="dock:fill" style="visible:true">
+                    <StillArt name="lock" dimensions="height:40%; width:35%; center-x:48%; center-y:50%" style="texture:lock_icon; region:lockIcon; alpha:0;"/>
+                    <Text name="lock_text" dimensions="height:0; width:0; center-x:20%; center-y:65%" style="font:UbuntuBold_10; alpha:0;"/>
+                </Group>
+                <FocusBox name="focus" dimensions="dock:fill">
+                    <DropTarget name="droptarget" dimensions="dock:fill"/>
+                </FocusBox>
+                <ListLayout name="deployable_list" dimensions="width:200%; height:100%; bottom:-10; center-x:135%" style="vpadding:0"/>
+                <Group name="attractHookFront" dimensions="dock:fill" />
+            </Group>
+        </BluePrint>
+
 
     </BluePrints>
 
