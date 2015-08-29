@@ -25,7 +25,7 @@ require "lib/lib_UserKeybinds"
 require "lib/lib_InputIcon"
 
 -- Custom
-require "./lib/lib_RedBand"
+require "./util/optionsPopupWindow"
 
 -- ------------------------------------------
 -- Options UI
@@ -109,7 +109,6 @@ g_Pizzas = {
     ["AbilityPizza"] = {
         name = "Abilities",
         key = "AbilityPizza",
-        activationAction = "activate_ability_pizza",
         enabled = true,
         isCustom = false,
         activationType = "ability_override",
@@ -124,7 +123,6 @@ g_Pizzas = {
     ["TransportPizza"] = {
         name = "Transport",
         key = "TransportPizza",
-        activationAction = "activate_transport_pizza",
         enabled = true,
         isCustom = true,
         activationType = "calldown",
@@ -150,7 +148,6 @@ g_Pizzas = {
     ["OtherPizza"] = {
         name = "Other",
         key = "OtherPizza",
-        activationAction = "activate_other_pizza",
         enabled = true,
         isCustom = true,
         activationType = "calldown",
@@ -183,6 +180,8 @@ g_KeySet_PizzaActivators = nil
 g_KeySet_PizzaDeactivators = nil
 g_KeySet_CustomPizzaButtons = nil -- Note: Non-custom pizzas will have the same buttons, its just that we need one of these for the custom ones since we don't directly override binds with them.
 
+g_GetPizzaByKeybindAction = {}
+
 -- Other pizza related variables
 VERY_IMPORTANT_OVERRIDEN_KEYBINDS = nil
 g_IsAbilityPizzaActive = false
@@ -213,6 +212,8 @@ OptionsUI = {
 }
 
 
+
+
 -- ------------------------------------------
 -- INTERFACE OPTIONS
 -- ------------------------------------------
@@ -238,24 +239,39 @@ function OnComponentLoad(args)
     LIB_SLASH.BindCallback({slash_list="redetect,gamepad", description="Attempt to detect active gamepad", func=OnSlashGamepad})
 end
 
+function GetPizzaActivatorAction(pizzaKey)
+    return "activate_" .. pizzaKey
+end
+
+function GetPizzaActivatorSetting(pizzaKey)
+    return "activate_" .. pizzaKey .. "_keycode"
+end
+
 function SetupUserKeybinds()
 
     -- g_KeySet_PizzaActivators
     -- This keyset has one action for each pizza it can activate
     g_KeySet_PizzaActivators = UserKeybinds.Create()
-    
-        -- Ability Pizza Bind
-        g_KeySet_PizzaActivators:RegisterAction("activate_ability_pizza", ActivateAbilityPizza)
-        if Component.GetSetting("ability_pizza_keycode") then
-            local keyCode = Component.GetSetting("ability_pizza_keycode")
-            g_KeySet_PizzaActivators:BindKey("activate_ability_pizza", keyCode)
-        end
+        
+        -- Generate from data :D
+        for pizzaKey, pizza in pairs(g_Pizzas) do
+            -- Vars
+            local action = GetPizzaActivatorAction(pizzaKey)
+            local setting = GetPizzaActivatorSetting(pizzaKey)
+            local handler = (pizzaKey == "AbilityPizza") and ActivateAbilityPizza or ActivateCalldownPizza -- Note: Ugh :D
 
-        -- Ported from g_KeySet_PizzaActivators, to be custom pizzas
-        g_KeySet_PizzaActivators:RegisterAction("calldown_pizza_transport", ActivateCalldownPizza)
-        g_KeySet_PizzaActivators:RegisterAction("calldown_pizza_other", ActivateCalldownPizza)
-        g_KeySet_PizzaActivators:BindKey("calldown_pizza_transport", KEYCODE_GAMEPAD_DPAD_RIGHT)
-        g_KeySet_PizzaActivators:BindKey("calldown_pizza_other", KEYCODE_GAMEPAD_DPAD_DOWN)
+            -- Make life easier
+            g_GetPizzaByKeybindAction[action] = pizzaKey
+
+            -- Register
+            g_KeySet_PizzaActivators:RegisterAction(action, handler)
+            
+            -- Bind
+            if Component.GetSetting(setting) then
+                local keyCode = Component.GetSetting(setting)
+                g_KeySet_PizzaActivators:BindKey(action, keyCode)
+            end
+        end
 
         -- Disable while creating the rest of the keybinds
         g_KeySet_PizzaActivators:Activate(false)
@@ -424,7 +440,7 @@ function SetupOptionsUI()
     -- List
 
     local DimensionOptions = {
-        ScrollerSpacing = 0,
+        ScrollerSpacing = 8,
         ScrollerSliderMarginVisible = 15,
         ScrollerSliderMarginHidden = 15,
     }
@@ -457,16 +473,84 @@ end
         local w_barContainer = w_barEntry:GetChild("container")
         local w_barGroup = w_barContainer:GetChild("bar")
         local w_barHandle = w_barGroup:GetChild("bar_handle")
+        local w_handleFocus = w_barHandle:GetChild("focus")
         local w_handleLabel = w_barHandle:GetChild("bar_handle_label")
         local w_handleInputIconGroup = w_barHandle:GetChild("bar_handle_input_icon")
         local w_barSlots = w_barGroup:GetChild("bar_slots")
+
+        -- Set handle focus
+        local KEYCATCHER = Component.CreateWidget([=[<KeyCatcher dimensions="left:0; right:1; top:0; bottom:1;"/>]=], Component.GetWidget("Window"))
+
+        function OnKeyCatch(args)
+            Popup_CancelQuestion()
+            KEYCATCHER:StopListening()
+            local pizza = args.widget:GetTag()
+            local key = args.widget:GetKeyCode()
+            local alt = args.widget:GetAlt()
+            if key ~= 27 then                   -- 27 = Escape: Ignore the escape key
+                ProcessKeyCatch(pizza, key, alt)
+            else
+                CancelKeyCatch()
+            end
+        end
+
+        KEYCATCHER:BindEvent("OnKeyCatch", OnKeyCatch)
+
+        function ProcessKeyCatch(pizzaKey, key, alt)
+            Debug.Log("ProcessKeyCatch", pizzaKey, key, alt)
+
+            local action = GetPizzaActivatorAction(pizzaKey)
+            local setting = GetPizzaActivatorSetting(pizzaKey)
+            g_KeySet_PizzaActivators:BindKey(action, key)
+            Component.SaveSetting(setting, key)
+            g_Pizzas[pizzaKey].barEntry.w_handleInputIcon:SetBind({keycode=key, alt=false}, true)
+        end
+
+        function CancelKeyCatch()
+            Debug.Log("CancelKeyCatch")
+            KEYCATCHER:StopListening()
+        end
+
+        w_handleFocus:BindEvent("OnMouseDown", function() Debug.Log("OnMouseDown")
+
+                KEYCATCHER:ListenForKey()
+
+                KEYCATCHER:SetTag(pizza.key)
+
+                local c_BindingPopup = {
+                    [1] = {
+                        Label = Component.LookupText("DELETE"),
+                        TintPlate = "#8E0909",
+                        OnClick = function() ProcessKeyCatch(pizza.key, 0, false) end,
+                        OnEnter = function() KEYCATCHER:StopListening() end,
+                        OnLeave = function() KEYCATCHER:ListenForKey() end,
+                    },
+                    [2] = {
+                        Label = Component.LookupText("CANCEL"),
+                        TintPlate = "#9C9C9C",
+                        OnClick = function() CancelKeyCatch() end,
+                        OnEnter = function() KEYCATCHER:StopListening() end,
+                        OnLeave = function() KEYCATCHER:ListenForKey() end,
+                    },
+                    OnEscape = 2,
+                }
+
+                c_BindingPopup.Text = Component.LookupText("KEYBINDER_ENTER_BINDING").."\n"..pizza.name
+                Popup_ShowQuestion(c_BindingPopup)
+                
+
+
+
+                                end)
+        w_handleFocus:BindEvent("OnMouseEnter", function() Debug.Log("OnMouseEnter") end)
+        w_handleFocus:BindEvent("OnMouseLeave", function() Debug.Log("OnMouseLeave") end)
 
         -- Set handle label
         w_handleLabel:SetText(tostring(pizza.name))
     
         -- Set handle input icon
         w_handleInputIcon = InputIcon.CreateVisual(w_handleInputIconGroup, "Bind")
-        local previousKeyCode = g_KeySet_PizzaActivators:GetKeybind("activate_ability_pizza") or "blank" -- TODO: pizza.activationAction
+        local previousKeyCode = g_KeySet_PizzaActivators:GetKeybind(GetPizzaActivatorAction(pizza.key)) or "blank"
         w_handleInputIcon:SetBind({keycode=previousKeyCode, alt=false}, true)
 
         -- Create slots
@@ -491,6 +575,7 @@ end
             w_barGroup = w_barGroup,
             w_barHandle = w_barHandle,
             w_handleLabel = w_handleLabel,
+            w_handleInputIcon = w_handleInputIcon,
             w_handleInputIconGroup = w_handleInputIconGroup,
             w_barSlots = w_barSlots,
             slotIcons = slotIcons,
@@ -982,7 +1067,7 @@ function ActivateCalldownPizza(args)
         g_KeySet_PizzaDeactivators:Activate(true)
         g_KeySet_CustomPizzaButtons:Activate(true)
 
-        g_CurrentlyActiveCalldownPizza = ( (args.name == "calldown_pizza_transport" and "TransportPizza") or (args.name == "calldown_pizza_other" and "OtherPizza"))
+        g_CurrentlyActiveCalldownPizza = g_GetPizzaByKeybindAction[args.name]
         Debug.Log("g_CurrentlyActiveCalldownPizza: ", g_CurrentlyActiveCalldownPizza)
         g_IsCalldownPizzaActive = true
 
@@ -1207,9 +1292,10 @@ function SetupDropFocus(w, pizzaKey, segmentIndex)
     local dropFocus = w:GetChild("focus")
     dropFocus:BindEvent("OnMouseDown", function()
         if (not PizzaSegmentEmpty(pizzaKey, segmentIndex)) then
-            Component.BeginDragDrop("item_sdb_id", GetDragInfoForPizzaSegment(pizzaKey, segmentIndex), nil);
+            Component.BeginDragDrop("item_sdb_id", GetDragInfoForPizzaSegment(pizzaKey, segmentIndex), nil)
         end
-    end);
+    end)
+    dropFocus:SetCursor("sys_hand");
 end
 
 

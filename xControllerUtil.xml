@@ -119,6 +119,8 @@
                         <Text name="bar_handle_label" dimensions="width:80%;left:10%;height:20%;top:13%;" style="font:Demi_11; valign:center; halign:center; wrap:false; clip:false; padding:0"/>
 
                         <Group name="bar_handle_input_icon" dimensions="width:100%;height:80%;top:20%;" />
+
+                        <FocusBox name="focus" dimensions="dock:fill"/>
                     </Group>
 
                     <!-- The container for the bar slots -->
@@ -208,6 +210,8 @@
                         </Group>
                     </Group>
                 </Group>
+
+                <FocusBox id="MouseBlocker" dimensions="dock:fill" style="visible:false"/>
             </Children>
             <OnClose bind="OnClose"/>
             <OnEscape bind="OnClose"/>
@@ -222,33 +226,34 @@
                 <Group id="PizzaContainer" dimensions="dock:fill"/> <!-- center-y:50%; center-x:50%; width:100%; height:100%; -->
             </Children>
         </PanelFrame>
-
-
-        <!-- straight outta invii -->
-        <TextureFrame name="tex" target="rt">
+    
+        <PanelFrame name="Popup" dimensions="left:50%+385; width:275; center-y:50%; height:202; relative:screen" visible="false" permanent="true" topmost="true"><!-- PanelLayer5 -->
             <Children>
-                <Group dimensions="top:0; left:0; width:100%; height:341.33">
-                    <StillArt dimensions="dock:fill" style="texture:colors; tint:#317EAA; region:white; alpha:0.4;"/>
-
-                    <Group dimensions="top:1; left:0; width:100%; height:6%"> <!-- Might need to do some uv trickery to get crisper text -->
-
-                        <!-- <StillArt dimensions="top:0; left:0; width:33.333333%; height:100%" style="texture:colors; region:white; tint:#000000; alpha:0.5;"/>
-                        <StillArt dimensions="top:0; left:33.33333%; width:33.33333%-1; height:100%" style="texture:colors; region:white; tint:#000000; alpha:0.5;"/>
-                        <StillArt dimensions="top:0; left:66.66666%; width:33.33333%; height:100%" style="texture:colors; region:white; tint:#000000; alpha:0.5;"/> -->
-
-                        <Text id="Left_Win_Title" key="WINDOW_TITE" dimensions="top:0; left:0; width:33.333333%; height:100%" style="font:Demi_9; halign:center; valign:center; drop-shadow:1; color:#FFFFFF; case:title" />
-                        <Text id="Front_Win_Title"  key="WINDOW_TITE" dimensions="top:0; left:33.33333%; width:33.33333%-1; height:100%" style="font:Demi_9; halign:center; valign:center; drop-shadow:0; color:#FFFFFF; case:title" />
-                        <Text key="WINDOW_TITE" dimensions="top:0; left:66.66666%; width:33.33333%; height:100%" style="font:Demi_9; halign:center; valign:center; drop-shadow:0; color:#FFFFFF; case:title" />
-                    </Group>
-
-                    <Group id="Scroll_Window" dimensions="top:7%; right:0; width:1020; height:93%">
-                        <!-- <StillArt dimensions="dock:fill" style="texture:scanlines; tint:#FF0000; alpha:0;"/> -->
-                    </Group>
-
-                    <Text id="Current_Item_Name" key="WINDOW_TITE" dimensions="top:38%; left:512-6%; width:12%; height:25%" style="font:Demi_9; halign:center; valign:center; drop-shadow:0; color:#FFFFFF; case:title; clip:true; wrap:true;" />
+                <!-- Background Art -->
+                <Group name="Art" dimensions="dock:fill" style="alpha:0">
+                    <Border dimensions="left:-1; right:100%+1; top:-1; bottom:100%+1;" class="PanelSubBackDrop" style="alpha:0.5; tint:#FFFFFF; glow:33FFFFFF"/>
+                    <Border dimensions="dock:fill" class="PanelSubBackDrop" style="alpha:1;"/>
+                </Group>
+                <!-- Question -->
+                <Group name="Question" dimensions="dock:fill" style="visible:false; alpha:0">
+                    <Text name="Text" dimensions="left:10; right:100%-10; top:5; bottom:100%-40" style="font:Demi_13; halign:center; valign:center; wrap:true"/>
+                    <TextTimer name="TextTimer" dimensions="left:10; right:100%-10; top:5; bottom:100%-40" style="font:Demi_13; halign:center; valign:center; format:%.0s; wrap:true"/>
+                </Group>
+                <!-- Tooltip -->
+                <Group name="Tooltip" dimensions="dock:fill" style="visible:false; alpha:0">
+                    <Text name="Title" dimensions="left:5; right:100%-5; top:5; bottom:20;" class="Option_Label" style="font:UbuntuBold_10; alpha:0.9"/>
+                    <Text name="Description" dimensions="left:5; right:100%-5; top:23; bottom:100%-3;" class="Option_Label" style="valign:top; halign:left; wrap:true;"/>
+                    <StillArt name="MoveIcon" dimensions="left:10; aspect:0.75; top:26; height:20" style="texture:IconsInput; region:mouse1; eatsmice:false;"/>
+                    <Text name="MoveText" dimensions="left:26; right:100%-5; top:28; height:16;" class="Option_Label" style="valign:center; halign:left;" key="MOVE"/>
+                    <StillArt name="ScaleIcon" dimensions="left:10; aspect:0.75; top:50; height:20" style="texture:IconsInput; region:mwheel; eatsmice:false;"/>
+                    <Text name="ScaleText" dimensions="left:26; right:100%-5; top:52; height:16;" class="Option_Label" style="valign:center; halign:left;" key="{Scale: 100%}"/>
                 </Group>
             </Children>
-        </TextureFrame>
+            <OnEscape bind="Popup_OnEscape"/>
+        </PanelFrame>
+        
+
+ 
 
 
 
