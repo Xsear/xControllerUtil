@@ -505,8 +505,23 @@ end
 
 
                                 end)
-        w_handleFocus:BindEvent("OnMouseEnter", function() Debug.Log("OnMouseEnter") end)
-        w_handleFocus:BindEvent("OnMouseLeave", function() Debug.Log("OnMouseLeave") end)
+        w_handleFocus:BindEvent("OnMouseEnter", function(args)
+            -- Do somethin here
+            local group = args.widget:GetParent():GetParent()
+            local barHandleSideGradient = group:GetChild("bar_handle_gradient_side")
+            widgetInfo(barHandleSideGradient)
+            local divDur = 2
+            barHandleSideGradient:ParamTo("alpha", 1, divDur*.15)
+        end)
+        w_handleFocus:BindEvent("OnMouseLeave", function(args)
+            -- Do somethin here
+            local group = args.widget:GetParent():GetParent()
+            local barHandleSideGradient = group:GetChild("bar_handle_gradient_side")
+            local divDur = 2
+            barHandleSideGradient:ParamTo("alpha", 0.3, divDur*.25)
+        end)
+
+
 
         -- Set handle label
         w_handleLabel:SetText(tostring(pizza.name))
