@@ -171,6 +171,29 @@ g_Pizzas = {
     },
 }
 
+c_Pizza_Base = {
+    name = "???",
+    key = "better-set-this",
+    enabled = true,
+    isCustom = true,
+    activationType = "calldown",
+    slots = {
+        [1] = {
+                slotType = "empty",
+        },
+        [2] = {
+                slotType = "empty",
+        },
+        [3] = {
+                slotType = "empty",
+        },
+        [4] = {
+                slotType = "empty",
+        },
+    },
+    w_PIZZA = nil
+}
+
 -- Pizza Widget References
 w_PIZZA_CONTAINER = Component.GetWidget("PizzaContainer")
 w_PIZZA_Abilities = g_Pizzas["AbilityPizza"].w_PIZZA -- Shortcut (temp?)
@@ -356,83 +379,23 @@ function SetupOptionsUI()
 
 
     -- Test button
-    function TestButtonAction(args)
-        Debug.Table("TestButtonAction", args)
+    function AddPizzaButton(args)
+        Debug.Table("AddPizzaButton", args)
         Debug.Log("Is args.widget widget? : ", tostring(Component.IsWidget(args.widget)))
+        Debug.Log("This was button with name : ", args.widget:GetName())
 
-        Debug.Log("This was button with id : ", args.widget:GetName())
-
-
-        if not OptionsUI.POPUP then
-            OptionsUI.POPUP = RoundedPopupWindow.Create(OptionsUI.PANE_MAIN_LEFT_COLUMN)
-            OptionsUI.POPUP:EnableClose(true, function() OptionsUI.POPUP:Remove() OptionsUI.POPUP = nil end)
-
-            OptionsUI.POPUP:SetTitle("Keybinder")
-            OptionsUI.POPUP:SetDims("center-x:50%; center-y:50%; height:200; width:235")
-
-            OptionsUI.POPUP:TintBack("#ff6000")
-
-            local POPUP_BODY = OptionsUI.POPUP:GetBody()
-
-            OptionsUI.POPUP_BODY_INPUT_ICON = InputIcon.CreateVisual(POPUP_BODY, "Bind")
-            local previousKeyCode = g_KeySet_PizzaActivators:GetKeybind("activate_ability_pizza") or "blank"
-            OptionsUI.POPUP_BODY_INPUT_ICON:SetBind({keycode=previousKeyCode, alt=false}, true)
-
-
-            OptionsUI.POPUP_BODY_BIND_BUTTON = Component.CreateWidget('<Button id="SaveBindButton" key="{Save}" dimensions="center-x:15%; center-y:30%; height:20; width:60" style="font:Demi_11"/>', POPUP_BODY)
-            OptionsUI.POPUP_BODY_BIND_BUTTON:BindEvent("OnMouseDown", OnBindSave)
-
-
-            OptionsUI.POPUP_BODY_RETRY_BUTTON = Component.CreateWidget('<Button id="RetryBindButton" key="{Retry}" dimensions="center-x:45%; center-y:30%; height:20; width:60" style="font:Demi_11"/>', POPUP_BODY)
-            OptionsUI.POPUP_BODY_RETRY_BUTTON:BindEvent("OnMouseDown", OnBindRetry)
-
-
-            function OnKeyCaught(args)
-                local keyCode = args.widget:GetKeyCode()
-
-                Debug.Log("OnKeyCaught : keyCode " .. tostring(keyCode))
-
-                OptionsUI.POPUP_BODY_INPUT_ICON:SetBind({keycode=keyCode, alt=false}, true)
-            end
-
-            function OnBindSave(args)
-                Debug.Table("OnBindSave", args)
-
-
-                local keyCode = OptionsUI.POPUP_BODY_KEYCATCHER:GetKeyCode()
-                g_KeySet_PizzaActivators:BindKey("activate_ability_pizza", keyCode)
-                Component.SaveSetting("ability_pizza_keycode", keyCode)
-
-                OptionsUI.POPUP:Remove() OptionsUI.POPUP = nil
-            end
-
-            function OnBindRetry(args)
-                Debug.Table("OnBindRetry", args)
-                if OptionsUI.POPUP_BODY_KEYCATCHER then OptionsUI.POPUP_BODY_KEYCATCHER:ListenForKey() end
-            end
-
-            OptionsUI.POPUP_BODY_KEYCATCHER = Component.CreateWidget("KeyCatcher", POPUP_BODY):GetChild("KeyCatch")
-            OptionsUI.POPUP_BODY_KEYCATCHER:BindEvent("OnKeyCatch", OnKeyCaught)
-            --OptionsUI.POPUP_BODY_KEYCATCHER:ListenForKey()
-            --OptionsUI.POPUP_BODY_KEYCATCHER:SetTag()
-
-        end
+        -- feck the popups yo!
+        local pizza = _table.copy(c_Pizza_Base)
+        pizza.name = "Extra "
+        pizza.key = "extra1"
+        pizza.barEntry = CreatePizzaBarEntry(pizza)
+        UpdateAbilities()
     end
 
-    OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON = Component.CreateWidget('<Button id="BindAbilityButton" key="{Bind Ability Pizza}" dimensions="left:10.25; width:100%-20.5; top:5%; height:75"/>', OptionsUI.PANE_MAIN_LEFT_COLUMN)
-    OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON:BindEvent("OnMouseDown", TestButtonAction)
+    OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON = Component.CreateWidget('<Button id="CreatePizzaButton" key="{Add Pizza}" dimensions="left:10.25; width:100%-20.5; top:2.5%; height:75"/>', OptionsUI.PANE_MAIN_LEFT_COLUMN)
+    OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON:BindEvent("OnMouseDown", AddPizzaButton)
 
-    OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON2 = Component.CreateWidget('<Button id="CreatePizzaButton" key="{Create Pizza}" dimensions="left:10.25; width:100%-20.5; top:5%+100; height:75"/>', OptionsUI.PANE_MAIN_LEFT_COLUMN)
-    --OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON2:BindEvent("OnMouseDown", TestButtonAction)
-
-    OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON3 = Component.CreateWidget('<Button id="EditPizzaButton" key="{Edit Pizza}" dimensions="left:10.25; width:100%-20.5; top:5%+200; height:75"/>', OptionsUI.PANE_MAIN_LEFT_COLUMN)
-    --OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON3:BindEvent("OnMouseDown", TestButtonAction)
-
-    OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON4 = Component.CreateWidget('<Button id="DeletePizzaButton" key="{Delete Pizza}" dimensions="left:10.25; width:100%-20.5; top:5%+300; height:75"/>', OptionsUI.PANE_MAIN_LEFT_COLUMN)
-    --OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON4:BindEvent("OnMouseDown", TestButtonAction)
-
-
-    OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON5 = Component.CreateWidget('<Button id="RedetectButton" key="{Redetect Controllers}" dimensions="left:10.25; width:100%-20.5; top:5%+400; height:75"/>', OptionsUI.PANE_MAIN_LEFT_COLUMN)
+    OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON5 = Component.CreateWidget('<Button id="RedetectButton" key="{Redetect Controllers}" dimensions="left:10.25; width:100%-20.5; bottom:97.5%; height:75"/>', OptionsUI.PANE_MAIN_LEFT_COLUMN)
     OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON5:BindEvent("OnMouseDown", DetectActiveGamepad)
 
 
