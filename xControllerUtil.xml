@@ -45,6 +45,8 @@
             <Region name="circle_consumable" top="25" bottom="151" left="830" right="956" />
         </Texture>
 
+        <Texture name="eventsBG" src="components/MainUI/Panels/Dashboard/textures/eventsBG.png" premultiplied="false"/>
+    
     </Textures>
 
     <Styles>
@@ -80,6 +82,7 @@
             <Group name="LeftColumn" dimensions="left:0; top:0; height:100%; width:25%;" blueprint="Panel" style="alpha:1">
             </Group>
             <Group name="MainArea" dimensions="left:25%+1; top:0; height:100%; width:75%;" blueprint="Panel" style="tint:F94042">
+                <StillArt name="list_background" dimensions="dock:fill" style="texture:eventsBG; alpha:1;"/>
                 <Group name="List" dimensions="width:100%;height:100%-68;top:8;"/>
             </Group>
         </BluePrint>
@@ -111,11 +114,23 @@
                 <Group name="bar" dimensions="width:80%; left:10%; height:100%">
 
                     <!-- The background of the whole bar -->
-                    <StillArt name="bar_background" dimensions="dock:fill" style="texture:colors; region:white; tint:#666666; alpha:0.5;"/>
-    
+                    <StillArt name="bar_background" dimensions="dock:fill" style="texture:colors; region:white; tint:#666666; alpha:0.2;"/>
+                    
+                    <!-- Bar border -->
+                    <StillArt name="bar_border_background" dimensions="dock:fill" style="texture:colors; region:white; tint:#111111; eatsmice:false"/>
+                    <Border name="bar_border" dimensions="dock:fill" class="ButtonBorder" style="tint:#DADADA; alpha:.25 eatsmice:false"/>
+                
+                    <!-- Fancy gradients -->
+                    <StillArt name="bar_wide_gradient" dimensions="dock:fill" style="texture:gradients; region:white_right; alpha:0.3"/>
+                    <StillArt name="bar_handle_gradient" dimensions="height:100%; left:0; width:20%" style="texture:gradients; region:white_right; alpha:0.3"/>
+                    <StillArt name="bar_handle_gradient_side" dimensions="height:100%; left:20%; width:1.5%" style="texture:gradients; region:white_right; alpha:0.3"/>
+
+                    <StillArt name="shine_upper" dimensions="width:100%; height:40%; top:0" style="texture:gradients; region:white_up; alpha:0.33; tint:ffffff; exposure:0.4"/>
+                    <StillArt name="shine_lower" dimensions="width:100%; height:60%; top:40%" style="texture:gradients; region:white_up; alpha:0.25; tint:000000; exposure:0.4"/>
+
                     <!-- The left end of the bar -->
                     <Group name="bar_handle" dimensions="width:20%;height:100%;left:0;">
-                        <StillArt name="temp_bar_handle" dimensions="dock:fill" style="texture:colors; region:white; tint:#0000bb; alpha:0.5;"/>
+                        <StillArt name="temp_bar_handle" dimensions="dock:fill" style="texture:colors; region:white; tint:#0000bb; alpha:0;"/>
                         <Text name="bar_handle_label" dimensions="width:80%;left:10%;height:20%;top:13%;" style="font:Demi_11; valign:center; halign:center; wrap:false; clip:false; padding:0"/>
 
                         <Group name="bar_handle_input_icon" dimensions="width:100%;height:80%;top:20%;" />
@@ -125,7 +140,7 @@
 
                     <!-- The container for the bar slots -->
                     <Group name="bar_slots" dimensions="width:80%-40;height:100%;left:20%+40;">
-                        <StillArt name="temp_bar_slots" dimensions="dock:fill" style="texture:colors; region:white; tint:#00ff00; alpha:0.5;"/>
+                        <StillArt name="temp_bar_slots" dimensions="dock:fill" style="texture:colors; region:white; tint:#00ff00; alpha:0;"/>
 
                     </Group>
 
