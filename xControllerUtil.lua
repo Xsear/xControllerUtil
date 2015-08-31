@@ -271,6 +271,9 @@ function OnComponentLoad(args)
     -- Options UI
     SetupOptionsUI()
 
+    -- Daisy Wheel
+    SetupDaisyWheel()
+
     -- Slash
     LIB_SLASH.BindCallback({slash_list="xcontrollerutil,xconutil,xcu,cu", description="Controller Utilities", func=OnSlashGeneral})
     LIB_SLASH.BindCallback({slash_list="redetect,gamepad", description="Attempt to detect active gamepad", func=OnSlashGamepad})
@@ -1494,7 +1497,100 @@ end
 
 
 
+
+
+
+
 g_DaisyOverridenKeybinds = nil
+w_DaisyWheel = Component.GetFrame("DaisyWheel")
+w_DaisyWheel:Show(false)
+
+g_DaisyState.w_dpad = {}
+
+
+
+CB2_DaisyDPADInput = {
+    ["horizontal"] = nil,
+    ["vertical"] = nil,
+}
+
+local daisyActionToKey = {
+    ["daisy_dpad_left"] = "left",
+    ["daisy_dpad_up"] = "up",
+    ["daisy_dpad_right"] = "right",
+    ["daisy_dpad_down"] = "down",
+}
+
+local daisyKeyToAxis = {
+    ["up"] = "vertical",
+    ["down"] = "vertical",
+    ["right"] = "horizontal",
+    ["left"] = "horizontal",
+}
+
+local daisyGetOppositeAxis = {
+    ["vertical"] = "horizontal",
+    ["horizontal"] = "vertical"
+}
+
+local alphabetTable = {
+    ["up"]         = {"a", "b", "c", "d"},
+    ["right-up"]   = {"e", "f", "g", "h"},
+    ["right"]      = {"i", "j", "k", "l"},
+    ["right-down"] = {"m", "n", "o", "p"},
+    ["down"]       = {"q", "r", "s", "t"},
+    ["left-down"]  = {"u", "v", "w", "x"},
+    ["left"]       = {"y", "z", ",", "."},
+    ["left-up"]    = {":", "/", "@", "-"},
+}
+
+local alphabetTableKeycodes = {
+    ["up"]         = {65, 66, 67, 68},
+    ["right-up"]   = {69, 70, 71, 72},
+    ["right"]      = {73, 74, 75, 76},
+    ["right-down"] = {77, 78, 79, 80},
+    ["down"]       = {81, 82, 83, 84},
+    ["left-down"]  = {85, 86, 87, 88},
+    ["left"]       = {89, 90, 188, 190},
+    ["left-up"]    = {185, 191, 160, 189}, -- uncertanties here
+}
+
+
+local alphabetTableIndex = {
+    [1] = "up",
+    [2] = "right-up",
+    [3] = "right",
+    [4] = "right-down",
+    [5] = "down",
+    [6] = "left-down",
+    [7] = "left",
+    [8] = "left-up",
+}
+
+g_DaisyPausedOppositeAxis = false
+g_DaisyWheel_Widgets = nil
+
+function UpdateDaisyDpadText()
+    if not next(g_DaisyState.w_dpad) then
+        local temp_daisyCount = 0
+        for key, value in pairs(g_DaisyState.dpad) do
+            local text = Component.CreateWidget('<Text dimensions="height:100; width:20%; top:200+'..tostring((30*temp_daisyCount))..'" />', w_DaisyWheel)
+            temp_daisyCount = temp_daisyCount + 1
+            g_DaisyState.w_dpad[key] = text 
+        end
+    end
+
+    for key, text in pairs(g_DaisyState.w_dpad) do
+        local value = g_DaisyState.dpad[key]
+        text:SetText(key .. " : " .. tostring(value))
+        if value then
+            text:SetTextColor("#00ff00")
+        else
+            text:SetTextColor("#ff0000")
+        end
+        
+    end
+end
 
 function OnSlashDaisy(args)
 
@@ -1522,6 +1618,13 @@ function OnSlashDaisy(args)
         MassRestoreKeycodes({conflictingKeybinds=g_DaisyOverridenKeybinds})
         Debug.Log("Keys restored")
         g_DaisyOverridenKeybinds = nil
+
+        if CB2_DaisyStateCycle then
+            CB2_DaisyStateCycle:Release()
+        end
+
+        w_DaisyWheel:Show(false)
+
     else
         Debug.Log("Enter Daisy State")
 
@@ -1536,7 +1639,7 @@ function OnSlashDaisy(args)
 
 
         CB2_DaisyStateCycle = Callback2.CreateCycle(DaisyStateCycle)
-        CB2_DaisyStateCycle:Run(1)
+        CB2_DaisyStateCycle:Run(0.25)
 
 
         -- Free up keycodes
@@ -1547,6 +1650,12 @@ function OnSlashDaisy(args)
         System.BindKey("Social", "OpenChat", KEYCODE_GAMEPAD_START, false, 3)
         System.ApplyKeyBindings()
         Debug.Log("Submit bound")
+
+
+
+
+        w_DaisyWheel:Show(true)
+
     end
 
     
@@ -1566,6 +1675,80 @@ function OnSlashDaisy(args)
 --]]
 
 end
+
+
+function SetupDaisyWheel()
+
+    --PARENT, segmentData
+
+     g_DaisyWheel_Widgets = {}
+
+    local masterCont = Component.GetWidget("DaisyContainer")
+
+    local numberOfTables = 8
+    local perTablePrecent = (100/numberOfTables)
+
+    for i=1,8 do -- #alphabetTable (but that wont work since pairs)
+        local tableAngle = 360 * (perTablePrecent*i)/100 - 135
+        local tablePoint = GetPointOnCricle(400, 200, (RT_SEG_WIDTH*3)*0.30, tableAngle)
+
+
+        local cont = Component.CreateWidget(unicode.format('<Group dimensions="width:160; height:160; left:%i; top:%i;"><StillArt name="Background" dimensions="dock:fill" style="texture:colors; region:white; tint:#00eebb; alpha:0.4;"/></Group>', tablePoint.x-20, tablePoint.y-20), masterCont)
+        local characterTable = alphabetTable[alphabetTableIndex[i]]
+
+        local numberOfSegments = 4 -- # characters per segment
+        local perSegPrecent = (100/numberOfSegments)
+
+        -- Inner Alphabet Character Segments
+        for j=1,numberOfSegments do
+            local angle = 360 * (perSegPrecent*j)/100 + 90
+            local point = GetPointOnCricle(90, 80, (RT_SEG_WIDTH/2)*0.30, angle)
+            local SEGMENT = Component.CreateWidget(unicode.format('<Group blueprint="KeyPizzaSegment" dimensions="width:20; height:20; left:%i; top:%i;"></Group>', point.x-20, point.y-20), cont)
+            
+            if (characterTable[j]) then
+
+                local inputIcon = InputIcon.CreateVisual(SEGMENT:GetChild("inputIconGroup"), "Bind")
+                local keyCode = alphabetTableKeycodes[alphabetTableIndex[i]][j]
+                inputIcon:SetBind({keycode=keyCode, alt=false}, true)
+
+            end
+        end
+
+        g_DaisyWheel_Widgets[alphabetTableIndex[i]] = cont
+
+    end
+
+
+    return cont
+
+end
+
+function CharToKeycode(char)
+    
+    assert(unicode.len(char) == 1)
+
+    local keycode = nil
+
+    -- convert to keycode
+    --[[
+
+    local temp_act_id = Component.GetInfo().."._temp_userkeybind";
+    Component.RegisterKeyAction(temp_act_id, "nil");        
+    Component.BindUserKey(temp_act_id, char);
+    keycode = Component.GetUserBoundKey(temp_act_id);
+    Component.UnregisterKeyAction(temp_act_id);
+    --]]
+    keycode = unicode.byte(char)
+
+    assert(keycode)
+    
+    Debug.Table("CharToKeyCode", {char=char, keycode=keycode})
+
+    return keycode
+end
+
+
+
 
 function DaisyStateCycle()
     Debug.Log("DaisyStateCycle")
@@ -1587,6 +1770,21 @@ function DaisyStateCycle()
 
     if g_DaisyState.direction ~= previousDirection then
         Output("Daisy Direction: " .. g_DaisyState.direction)
+    end
+
+    UpdateDaisyDpadText()
+    UpdateDaisyWidgetVisibility()
+
+
+end
+
+function UpdateDaisyWidgetVisibility()
+    for key, widget in pairs(g_DaisyWheel_Widgets) do
+        if key == g_DaisyState.direction then
+            widget:Show(true)
+        else
+            widget:Show(false)
+        end
     end
 end
 
@@ -1613,7 +1811,7 @@ function DecideDaisyDirection()
             ["left-down"] = {"left", "down"},
             ["right-down"] = {"right", "down"},
             ["left-up"] = {"left", "up"},
-            ["left-up"] = {"right", "up"},
+            ["right-up"] = {"right", "up"},
         }
 
 
@@ -1654,21 +1852,56 @@ function DaisyDPADInput(args)
     assert(g_DaisyState)
     assert(g_DaisyState.active)
 
-    local actionToStateKey = {
-        ["daisy_dpad_left"] = "left",
-        ["daisy_dpad_up"] = "up",
-        ["daisy_dpad_right"] = "right",
-        ["daisy_dpad_down"] = "down",
-    }
+    local action = args.name
+    local key = daisyActionToKey[action]
+    local axis = daisyKeyToAxis[key]
+    local oppositeAxis = daisyGetOppositeAxis[axis]
 
-    local key = actionToStateKey[args.name]
+    -- Press
+    if args.is_pressed then
 
-     if args.is_pressed then
+        -- Immidieately set the state
         g_DaisyState.dpad[key] = true
         Output("Pressed " .. args.name)
+
+        -- Now is the time to try and catch diagonal input.
+        -- If there is a callback pending for the opposite axis of this key, then we want to hold that callback until we let go of this key, so that the diagonal state can be preserved.
+        if CB2_DaisyDPADInput[oppositeAxis] ~= nil then
+            Output("Pausing" .. oppositeAxis .. " axis callback while " .. key .. " is pressed")
+            CB2_DaisyDPADInput[oppositeAxis]:Pause()
+            g_DaisyPausedOppositeAxis = true
+        end
+
+    -- Release
     elseif args.is_released then
+        
+        -- We need some flex in order to get diagonal input, so we don't set the state to false right away.
+        --We will use a callback specific to this axis to do so later.
         Output("Released " .. args.name)
-        Callback2.FireAndForget(function(key) g_DaisyState.dpad[key] = false Output("Cleared " .. args.name) end, key, 0.75)
+
+        -- If there is already a callback pending for this axis, we execute it right away so that it isn't lost when we create one for this key.
+        if CB2_DaisyDPADInput[axis] ~= nil then
+            Output("Cancelling " .. axis .. " axis callback")
+            CB2_DaisyDPADInput[axis]:Execute()
+            CB2_DaisyDPADInput[axis] = nil
+        end 
+
+        -- We create an axis specific callback to clear this input
+        CB2_DaisyDPADInput[axis] = Callback2.Create()
+        CB2_DaisyDPADInput[axis]:Bind(function(args)
+            g_DaisyState.dpad[args.key] = false
+            CB2_DaisyDPADInput[args.axis]:Release()
+            CB2_DaisyDPADInput[args.axis] = nil
+            Output("Reset " .. args.key)
+        end, {key=key, axis=axis})
+        CB2_DaisyDPADInput[axis]:Schedule(0.25)
+
+        -- Now, if when we pressed this key, we paused the opposite axis, we need to undo that
+        if g_DaisyPausedOppositeAxis then
+            CB2_DaisyDPADInput[oppositeAxis]:Unpause()
+            g_DaisyPausedOppositeAxis = false
+        end
+
     end
 
 end
@@ -1697,17 +1930,6 @@ function DaisyXYABInput(args)
         Component.GenerateEvent("TextInput:onsubmit", {})
         Component.GenerateEvent("chat:ChatInput_OnChatSubmit", {})
     else
-
-        local alphabetTable = {
-            ["up"]         = {"a", "b", "c", "d"},
-            ["right-up"]   = {"e", "f", "g", "h"},
-            ["right"]      = {"i", "j", "k", "l"},
-            ["right-down"] = {"m", "n", "o", "p"},
-            ["down"]       = {"q", "r", "s", "t"},
-            ["left-down"]  = {"u", "v", "w", "x"},
-            ["left"]       = {"y", "z", ",", "."},
-            ["left-up"]    = {":", "/", "@", "-"},
-        }
 
         if args.is_pressed then
             if g_DaisyState.direction == "none" then
