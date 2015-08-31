@@ -236,6 +236,20 @@ OptionsUI = {
 
 
 
+g_KeySet_Daisy_DPAD = nil
+g_KeySet_Daisy_XYAB = nil
+g_DaisyState = {
+    active = false,
+    dpad = {
+        left = false,
+        up = false,
+        right = false,
+        down = false,
+    },
+}
+
+
+
 
 -- ------------------------------------------
 -- INTERFACE OPTIONS
@@ -326,6 +340,32 @@ function SetupUserKeybinds()
 
         -- Disable while creating the rest of the keybinds
         g_KeySet_CustomPizzaButtons:Activate(false)
+
+
+
+    -- Daisy test
+    g_KeySet_Daisy_DPAD = UserKeybinds.Create()
+        g_KeySet_Daisy_DPAD:RegisterAction("daisy_dpad_left", DaisyDPADInput, "toggle")
+        g_KeySet_Daisy_DPAD:BindKey("daisy_dpad_left", KEYCODE_GAMEPAD_DPAD_LEFT)
+        g_KeySet_Daisy_DPAD:RegisterAction("daisy_dpad_up", DaisyDPADInput, "toggle")
+        g_KeySet_Daisy_DPAD:BindKey("daisy_dpad_up", KEYCODE_GAMEPAD_DPAD_UP)
+        g_KeySet_Daisy_DPAD:RegisterAction("daisy_dpad_right", DaisyDPADInput, "toggle")
+        g_KeySet_Daisy_DPAD:BindKey("daisy_dpad_right", KEYCODE_GAMEPAD_DPAD_RIGHT)
+        g_KeySet_Daisy_DPAD:RegisterAction("daisy_dpad_down", DaisyDPADInput, "toggle")
+        g_KeySet_Daisy_DPAD:BindKey("daisy_dpad_down", KEYCODE_GAMEPAD_DPAD_DOWN)
+        g_KeySet_Daisy_DPAD:Activate(false)
+
+    g_KeySet_Daisy_XYAB = UserKeybinds.Create()
+        g_KeySet_Daisy_XYAB:RegisterAction("daisy_xyab", DaisyXYABInput)
+        for i, keyCode in ipairs(ABILITY_PIZZA_KEYBINDINGS_ORDER) do
+            g_KeySet_Daisy_XYAB:BindKey("daisy_xyab", keyCode, i)
+        end
+        g_KeySet_Daisy_XYAB:BindKey("daisy_xyab", KEYCODE_GAMEPAD_RIGHT_BUMPER, 5)
+        --g_KeySet_Daisy_XYAB:BindKey("daisy_xyab", KEYCODE_GAMEPAD_START, 6)
+
+        g_KeySet_Daisy_XYAB:Activate(false)
+
+
 
 
     -- Ready
@@ -664,8 +704,8 @@ function OnSlashGeneral(args)
 
     if args[1] then
 
-        if args[1] == "something" then
-
+        if args[1] == "daisy" then
+            OnSlashDaisy(args)
         end
 
     else
@@ -1450,6 +1490,327 @@ function UpdatePizzaBarSlotIcon(pizzaKey, segmentIndex, slotIcon)
         w_ICON:ClearIcon()
     end
 end
+
+
+
+
+g_DaisyOverridenKeybinds = nil
+
+function OnSlashDaisy(args)
+
+    Debug.Log("OnSlashDaisy")
+
+    if g_DaisyState.active then
+        Debug.Log("Exit Daisy State")
+
+        g_DaisyState.active = false
+
+        g_KeySet_Daisy_DPAD:Activate(false)
+        g_KeySet_Daisy_XYAB:Activate(false)
+        Debug.Log("Daisy Keysets Disabled")
+
+        Component.SetInputMode(nil)
+        Debug.Log("Cursor mode disengaged")
+
+        -- Unbind submit
+        System.BindKey("Social", "OpenChat", nil, false, 3)
+        System.ApplyKeyBindings()
+        Debug.Log("Submit unbound")
+
+        -- Restore keycodes
+        Debug.Log("Restoring keys")
+        MassRestoreKeycodes({conflictingKeybinds=g_DaisyOverridenKeybinds})
+        Debug.Log("Keys restored")
+        g_DaisyOverridenKeybinds = nil
+    else
+        Debug.Log("Enter Daisy State")
+
+        g_DaisyState.active = true
+
+        g_KeySet_Daisy_DPAD:Activate(true)
+        g_KeySet_Daisy_XYAB:Activate(true)
+        Debug.Log("Daisy Keysets Enabled")
+
+        Component.SetInputMode("cursor")
+        Debug.Log("Cursor mode engaged")
+
+
+        CB2_DaisyStateCycle = Callback2.CreateCycle(DaisyStateCycle)
+        CB2_DaisyStateCycle:Run(1)
+
+
+        -- Free up keycodes
+        Debug.Log("Overriding keys")
+        g_DaisyOverridenKeybinds = MassFreeKeycodes({keycodes={[KEYCODE_GAMEPAD_START] = true}})
+
+        -- Bind submit
+        System.BindKey("Social", "OpenChat", KEYCODE_GAMEPAD_START, false, 3)
+        System.ApplyKeyBindings()
+        Debug.Log("Submit bound")
+    end
+
+    
+    
+
+
+--[[
+    g_DaisyState = {
+        active = false,
+        dpad = {
+            left = false,
+            up = false,
+            right = false,
+            down = false,
+        },
+    }
+--]]
+
+end
+
+function DaisyStateCycle()
+    Debug.Log("DaisyStateCycle")
+    --[[
+    local count = 0
+    for key, pressed in pairs(g_DaisyState.dpad) do
+        if pressed then count = count + 1 end
+    end
+    if count > 1 then
+        Debug.Table("DIRECTIONAL INTERVENTION!", g_DaisyState)
+        Output("!! !! Detected diagonal input")
+    end
+    --local test = DecideDaisyDirection()
+    --]]
+
+    local previousDirection = g_DaisyState.direction
+
+    g_DaisyState.direction = DecideDaisyDirection()
+
+    if g_DaisyState.direction ~= previousDirection then
+        Output("Daisy Direction: " .. g_DaisyState.direction)
+    end
+end
+
+function DecideDaisyDirection()
+    
+    local pressedKeys = {}
+    
+    for key, pressed in pairs(g_DaisyState.dpad) do
+        if pressed then table.insert(pressedKeys, key) end
+    end
+
+    local direction = "none"
+
+    if #pressedKeys == 1 then
+        --Output(" ***** Daisy Direction: " .. pressedKeys[1])
+
+        direction = pressedKeys[1]
+
+    elseif #pressedKeys == 2 then
+
+        --Output(" ***** Daisy Direction: " .. pressedKeys[1] .. " + " .. pressedKeys[2])
+
+        local acceptedCombos = {
+            ["left-down"] = {"left", "down"},
+            ["right-down"] = {"right", "down"},
+            ["left-up"] = {"left", "up"},
+            ["left-up"] = {"right", "up"},
+        }
+
+
+        for diag, comboKeys in pairs(acceptedCombos) do
+
+            local matches = 0
+            for i, key in ipairs(pressedKeys) do
+                for j, diagKey in ipairs(comboKeys) do
+                    if key == diagKey then
+                        matches = matches + 1
+                    end
+                end
+            end
+            if matches == 2 then
+                direction = diag
+                break
+            end
+        end
+
+    else
+        --Output(" ***** Daisy Direction: none")
+
+    end
+
+    return direction
+
+end
+
+
+function DaisyDPADInput(args)
+    -- daisy_dpad_left
+    -- daisy_dpad_up
+    -- daisy_dpad_right
+    -- daisy_dpad_down
+    Debug.Log("DaisyDPADInput " .. args.name)
+    --Debug.Event(args)
+
+    assert(g_DaisyState)
+    assert(g_DaisyState.active)
+
+    local actionToStateKey = {
+        ["daisy_dpad_left"] = "left",
+        ["daisy_dpad_up"] = "up",
+        ["daisy_dpad_right"] = "right",
+        ["daisy_dpad_down"] = "down",
+    }
+
+    local key = actionToStateKey[args.name]
+
+     if args.is_pressed then
+        g_DaisyState.dpad[key] = true
+        Output("Pressed " .. args.name)
+    elseif args.is_released then
+        Output("Released " .. args.name)
+        Callback2.FireAndForget(function(key) g_DaisyState.dpad[key] = false Output("Cleared " .. args.name) end, key, 0.75)
+    end
+
+end
+
+local g_PreviouslyTyped = ""
+
+function DaisyXYABInput(args)
+    -- daisy_xyab
+    Debug.Log("DaisyXYABInput")
+    Debug.Event(args)
+
+    assert(g_DaisyState)
+    assert(g_DaisyState.active)
+
+    if args.keycode == KEYCODE_GAMEPAD_RIGHT_BUMPER then
+
+        if g_PreviouslyTyped ~= "" then
+            g_PreviouslyTyped = unicode.sub(g_PreviouslyTyped, 1, -2)
+            local newArgs = {text = g_PreviouslyTyped}
+            Component.GenerateEvent("MY_BEGIN_CHAT", newArgs)
+        else
+            Output("Nothing to remove!")
+        end
+    elseif args.keycode == KEYCODE_GAMEPAD_START then
+        Output("Submit pls")
+        Component.GenerateEvent("TextInput:onsubmit", {})
+        Component.GenerateEvent("chat:ChatInput_OnChatSubmit", {})
+    else
+
+        local alphabetTable = {
+            ["up"]         = {"a", "b", "c", "d"},
+            ["right-up"]   = {"e", "f", "g", "h"},
+            ["right"]      = {"i", "j", "k", "l"},
+            ["right-down"] = {"m", "n", "o", "p"},
+            ["down"]       = {"q", "r", "s", "t"},
+            ["left-down"]  = {"u", "v", "w", "x"},
+            ["left"]       = {"y", "z", ",", "."},
+            ["left-up"]    = {":", "/", "@", "-"},
+        }
+
+        if args.is_pressed then
+            if g_DaisyState.direction == "none" then
+                Output("daisy xyab but no direction")
+            else
+                local characterTable = alphabetTable[g_DaisyState.direction]
+
+                local character = characterTable[PIZZA_KEYBINDINGS_KEYCODE_INDEX[args.keycode]]
+
+                g_PreviouslyTyped = g_PreviouslyTyped .. character
+                ChatLib.AddTextToChatInput({text = character})
+
+
+            end
+        end
+    end
+ end
+
+
+
+
+function MassFreeKeycodes(args)
+    Debug.Table("MassFreeKeycodes", args)
+
+    --[[
+
+        args.keycodes = {
+            [<keycode>] = true,
+        }
+
+
+    --]]
+
+
+    -- Get all keybinds
+    Debug.Log("Getting all keybinds")
+    local keybindCategories = {
+        "Movement",
+        "Combat",
+        "Social",
+        "Interface",
+        "Vehicle",
+        "ScopeMode",
+    }
+    local allKeybinds = {}
+    for i, category in ipairs(keybindCategories) do
+        allKeybinds[category] = System.GetKeyBindings(category, false) -- false here means get current keybinds apparently
+    end
+
+    --Debug.Table("allKeybinds", allKeybinds)
+
+    -- Identify all keybinds that conflict
+    Debug.Log("Identifying conflicting keybinds")
+    local conflictingKeybinds = {}
+    for category, actions in pairs(allKeybinds) do
+        for action, slots in pairs(actions) do
+            for i, bind in ipairs(slots) do
+                if args.keycodes[bind.keycode] then
+                    local conflict = {category=category, action=action, index=i, keycode=bind.keycode}
+                    table.insert(conflictingKeybinds, conflict)
+                end
+            end
+        end
+    end
+
+    -- Debugers are safe!~
+    Debug.Table("Let's hope we don't error because if we do we're gonna lose these conflicting keybinds: ", conflictingKeybinds)
+
+    -- Now lets wipe those keybinds
+    Debug.Log("Unbinding conflicting keybinds")
+    for i, conflict in ipairs(conflictingKeybinds) do
+        Debug.Log("Unbinding ", conflict.category, " : ", conflict.action, " : ", conflict.index)
+        System.BindKey(conflict.category, conflict.action, 0, false, conflict.index) -- false here means the bind is without the modifier key pressed
+    end
+
+    Debug.Log("Applying the changes, no turning back now!")
+    System.ApplyKeyBindings()
+
+    Debug.Log("Returning conflicting keybinds, keep them safe")
+    return conflictingKeybinds
+end
+
+function MassRestoreKeycodes(args)
+    --[[
+        args.conflictingKeybinds -- from MassFreeKeycodes
+    --]]
+
+    Debug.Table("MassRestoreKeycodes", args)
+
+    Debug.Log("Restoring conflicting keybinds")
+    for i, conflict in ipairs(args.conflictingKeybinds) do
+        System.BindKey(conflict.category, conflict.action, conflict.keycode, false, conflict.index)
+    end
+
+    -- We did good didn't we? Akanari sou na!
+    Debug.Log("Applying the restored keybinds, hope you're doing awesome :)")
+    System.ApplyKeyBindings()
+end
+
+
+
+
+
 
 
 
