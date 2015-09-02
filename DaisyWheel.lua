@@ -4,12 +4,18 @@
 --   by: Xsear
 -- ------------------------------------------
 
-
+require 'lib/lib_NavWheel'
+require 'lib/lib_ContextWheel'
 
 g_KeySet_Daisy_DPAD = nil
 g_KeySet_Daisy_XYAB = nil
 g_DaisyState = {
     active = false,
+    mode = "default",
+    modifiers = {
+        caps = false,
+        numbers = false
+    },
     dpad = {
         left = false,
         up = false,
@@ -64,15 +70,90 @@ local alphabetTable = {
     ["left-up"]    = {":", "/", "@", "-"},
 }
 
-local alphabetTableKeycodes = {
-    ["up"]         = {65, 66, 67, 68},
-    ["right-up"]   = {69, 70, 71, 72},
-    ["right"]      = {73, 74, 75, 76},
-    ["right-down"] = {77, 78, 79, 80},
-    ["down"]       = {81, 82, 83, 84},
-    ["left-down"]  = {85, 86, 87, 88},
-    ["left"]       = {89, 90, 188, 190},
-    ["left-up"]    = {185, 191, 160, 189}, -- uncertanties here
+local fullAlphabetTable = {
+    ["default"] = {
+            ["up"]         = {"a", "b", "c", "d"},
+            ["right-up"]   = {"e", "f", "g", "h"},
+            ["right"]      = {"i", "j", "k", "l"},
+            ["right-down"] = {"m", "n", "o", "p"},
+            ["down"]       = {"q", "r", "s", "t"},
+            ["left-down"]  = {"u", "v", "w", "x"},
+            ["left"]       = {"y", "z", ",", "."},
+            ["left-up"]    = {":", "/", "@", "-"},
+    },
+    ["caps"] = {
+            ["up"]         = {"A", "B", "C", "D"},
+            ["right-up"]   = {"E", "F", "G", "H"},
+            ["right"]      = {"I", "J", "K", "L"},
+            ["right-down"] = {"M", "N", "O", "P"},
+            ["down"]       = {"Q", "R", "S", "T"},
+            ["left-down"]  = {"U", "V", "W", "X"},
+            ["left"]       = {"Y", "Z", "?", "!"},
+            ["left-up"]    = {";", "\\", "&", "_"},
+    },
+    ["numbers"] = {
+            ["up"]         = {"1", "2", "3", "4"},
+            ["right-up"]   = {"5", "6", "7", "8"},
+            ["right"]      = {"9", "0", "*", "+"},
+            ["right-down"] = {"£", "€", "$", "’"},
+            ["down"]       = {"'", "\"", "~", "|"},
+            ["left-down"]  = {"=", "#", "%", "^"},
+            ["left"]       = {"<", ">", "[", "]"},
+            ["left-up"]    = {"{", "}", "(", ")"},
+    },
+    ["special"] = {
+            ["up"]         = {":D", ":(", ":)", "®"},
+            ["right-up"]   = {"™", "©", "G", ":Ð"},
+            ["right"]      = {":'D", "", "", ""},
+            ["right-down"] = {"", "", "", ""},
+            ["down"]       = {"", "", "", ""},
+            ["left-down"]  = {"", "", "", ""},
+            ["left"]       = {"", "", "", ""},
+            ["left-up"]    = {"", "", "", ""},
+    },
+}
+
+local fullAlphabetTableKeycodes = {
+    ["default"] = {
+            ["up"]         = {65, 66, 67, 68},
+            ["right-up"]   = {69, 70, 71, 72},
+            ["right"]      = {73, 74, 75, 76},
+            ["right-down"] = {77, 78, 79, 80},
+            ["down"]       = {81, 82, 83, 84},
+            ["left-down"]  = {85, 86, 87, 88},
+            ["left"]       = {89, 90, 0, 0},
+            ["left-up"]    = {186, 191, 276, 189},
+    },
+    ["caps"] = {
+            ["up"]         = {65, 66, 67, 68},
+            ["right-up"]   = {69, 70, 71, 72},
+            ["right"]      = {73, 74, 75, 76},
+            ["right-down"] = {77, 78, 79, 80},
+            ["down"]       = {81, 82, 83, 84},
+            ["left-down"]  = {85, 86, 87, 88},
+            ["left"]       = {89, 90, 0, 0},
+            ["left-up"]    = {186, 226, 276, 189},
+    },
+    ["numbers"] = {
+            ["up"]         = {49, 50, 51, 52},
+            ["right-up"]   = {53, 54, 55, 56},
+            ["right"]      = {57, 48, 106, 107},
+            ["right-down"] = {0, 0, 0, 192},
+            ["down"]       = {222, 226, 192, 0},
+            ["left-down"]  = {187, 0, 0, 0},
+            ["left"]       = {188, 190, 219, 221},
+            ["left-up"]    = {186, 226, 276, 189},
+    },
+    ["special"] = {
+            ["up"]         = {0, 0, 0, 0},
+            ["right-up"]   = {0, 0, 0, 0},
+            ["right"]      = {0, "", "", ""},
+            ["right-down"] = {"", "", "", ""},
+            ["down"]       = {"", "", "", ""},
+            ["left-down"]  = {"", "", "", ""},
+            ["left"]       = {"", "", "", ""},
+            ["left-up"]    = {"", "", "", ""},
+    },
 }
 
 
@@ -102,12 +183,17 @@ function DaisyWheel_UserKeybinds()
 
     g_KeySet_Daisy_XYAB = UserKeybinds.Create()
         g_KeySet_Daisy_XYAB:RegisterAction("daisy_xyab", DaisyXYABInput)
+        g_KeySet_Daisy_XYAB:RegisterAction("daisy_space", DaisyXYABInput)
+        g_KeySet_Daisy_XYAB:RegisterAction("daisy_backspace", DaisyXYABInput, "toggle")
+        g_KeySet_Daisy_XYAB:RegisterAction("daisy_caps", DaisyXYABInput, "toggle")
+        g_KeySet_Daisy_XYAB:RegisterAction("daisy_numbers", DaisyXYABInput, "toggle")
         for i, keyCode in ipairs(ABILITY_PIZZA_KEYBINDINGS_ORDER) do
             g_KeySet_Daisy_XYAB:BindKey("daisy_xyab", keyCode, i)
         end
-        g_KeySet_Daisy_XYAB:BindKey("daisy_xyab", KEYCODE_GAMEPAD_RIGHT_BUMPER, 5)
-        --g_KeySet_Daisy_XYAB:BindKey("daisy_xyab", KEYCODE_GAMEPAD_START, 6)
-
+        g_KeySet_Daisy_XYAB:BindKey("daisy_space", KEYCODE_GAMEPAD_RIGHT_BUMPER)
+        g_KeySet_Daisy_XYAB:BindKey("daisy_backspace", KEYCODE_GAMEPAD_LEFT_BUMPER)
+        g_KeySet_Daisy_XYAB:BindKey("daisy_caps", KEYCODE_GAMEPAD_LEFT_TRIGGER)
+        g_KeySet_Daisy_XYAB:BindKey("daisy_numbers", KEYCODE_GAMEPAD_RIGHT_TRIGGER)
         g_KeySet_Daisy_XYAB:Activate(false)
 end
 
@@ -115,6 +201,7 @@ end
 function DaisyWheel_OnComponentLoad()
 
     w_DaisyWheelTableWidgets = {}
+    w_DaisyWheelCharacterWidgets = {}
 
     local masterCont = DAISY_CONTAINER
 
@@ -127,10 +214,12 @@ function DaisyWheel_OnComponentLoad()
 
 
         local cont = Component.CreateWidget(unicode.format('<Group dimensions="width:160; height:160; left:%i; top:%i;"><StillArt name="Background" dimensions="dock:fill" style="texture:colors; region:white; tint:#00eebb; alpha:0.4;"/></Group>', tablePoint.x-20, tablePoint.y-20), masterCont)
-        local characterTable = alphabetTable[alphabetTableIndex[i]]
+        local characterTable = fullAlphabetTable["default"][alphabetTableIndex[i]]
 
         local numberOfSegments = 4 -- # characters per segment
         local perSegPrecent = (100/numberOfSegments)
+
+        w_DaisyWheelCharacterWidgets[alphabetTableIndex[i]] = {}
 
         -- Inner Alphabet Character Segments
         for j=1,numberOfSegments do
@@ -141,8 +230,10 @@ function DaisyWheel_OnComponentLoad()
             if (characterTable[j]) then
 
                 local inputIcon = InputIcon.CreateVisual(SEGMENT:GetChild("inputIconGroup"), "Bind")
-                local keyCode = alphabetTableKeycodes[alphabetTableIndex[i]][j]
+                local keyCode = fullAlphabetTableKeycodes["default"][alphabetTableIndex[i]][j]
                 inputIcon:SetBind({keycode=keyCode, alt=false}, true)
+
+                w_DaisyWheelCharacterWidgets[alphabetTableIndex[i]][j] = inputIcon
 
             end
         end
@@ -151,6 +242,12 @@ function DaisyWheel_OnComponentLoad()
 
     end
 
+    -- Create navwheel node
+    local NAVWHEEL_NODE = NavWheel.CreateNode()
+    NAVWHEEL_NODE:GetIcon():SetTexture("icons", "rotate");
+    NAVWHEEL_NODE:SetTitle("Daisy Wheel")   
+    NAVWHEEL_NODE:SetAction(DaisyWheel_Activate)
+    NAVWHEEL_NODE:SetParent("hud_root")
 end
 
 
@@ -284,10 +381,21 @@ end
 
 function UpdateDaisyWidgetVisibility()
     for key, widget in pairs(w_DaisyWheelTableWidgets) do
+        widget:Show(true)
         if key == g_DaisyState.direction then
-            widget:Show(true)
+            widget:ParamTo("alpha", 1, 0.25, "ease-out")
+        elseif g_DaisyState.direction == "none" then
+            widget:ParamTo("alpha", 0.7, 0.5, "ease-in")
         else
-            widget:Show(false)
+            --widget:Show(false)
+            widget:ParamTo("alpha", 0.4, 0.5, "ease-in")
+        end
+    end
+
+    for key, widgets in pairs(w_DaisyWheelCharacterWidgets) do
+        for i, inputIcon in ipairs(widgets) do
+            local keyCode = fullAlphabetTableKeycodes[g_DaisyState.mode][key][i]
+            inputIcon:SetBind({keycode=keyCode, alt=false}, true)
         end
     end
 end
@@ -415,25 +523,58 @@ function DaisyXYABInput(args)
     assert(g_DaisyState)
     assert(g_DaisyState.active)
 
-    if args.keycode == KEYCODE_GAMEPAD_RIGHT_BUMPER then
+    local action = args.name
 
+--[[
+daisy_xyab
+daisy_space
+daisy_backspace
+daisy_caps
+daisy_numbers
+--]]
+
+    if action == "daisy_backspace" then
         if g_DaisyPreviouslyTyped ~= "" then
             g_DaisyPreviouslyTyped = unicode.sub(g_DaisyPreviouslyTyped, 1, -2)
             Component.GenerateEvent("MY_BEGIN_CHAT", {text = g_DaisyPreviouslyTyped})
         else
             Output("Nothing to remove!")
         end
-    elseif args.keycode == KEYCODE_GAMEPAD_BACK then -- Todo: Bind this or it wont work
-        -- Exit Daisy mode?
-    else
 
+    elseif action == "daisy_caps" or action == "daisy_numbers" then
+
+        -- Get key
+        local modifierKey = (action == "daisy_caps" and "caps") or "numbers"
+        
+        -- Update value
+        g_DaisyState.modifiers[modifierKey] = args.is_pressed
+
+        -- Determine mode
+        if g_DaisyState.modifiers.caps and g_DaisyState.modifiers.numbers then
+            g_DaisyState.mode = "special"
+        elseif g_DaisyState.modifiers.caps then
+            g_DaisyState.mode = "caps"
+        elseif g_DaisyState.modifiers.numbers then
+            g_DaisyState.mode = "numbers"
+        else
+            g_DaisyState.mode = "default"
+        end
+
+
+    -- Character Output: daisy_space or daisy_xyab
+    else
         if args.is_pressed then
-            if g_DaisyState.direction == "none" then
+            if action ~= "daisy_space" and g_DaisyState.direction == "none" then
                 Output("daisy xyab but no direction")
             else
-                local characterTable = alphabetTable[g_DaisyState.direction]
+                local characterTable = fullAlphabetTable[g_DaisyState.mode][g_DaisyState.direction]
+                local character = ""
 
-                local character = characterTable[PIZZA_KEYBINDINGS_KEYCODE_INDEX[args.keycode]]
+                if action ~= "daisy_space" then
+                    character = characterTable[PIZZA_KEYBINDINGS_KEYCODE_INDEX[args.keycode]]
+                else
+                    character = " "
+                end
 
                 g_DaisyPreviouslyTyped = g_DaisyPreviouslyTyped .. character
                 ChatLib.AddTextToChatInput({text = character})
@@ -515,6 +656,7 @@ function MassRestoreKeycodes(args)
 
     Debug.Log("Restoring conflicting keybinds")
     for i, conflict in ipairs(args.conflictingKeybinds) do
+        Debug.Log("Binding ", conflict.category, " : ", conflict.action, " : ", conflict.index)
         System.BindKey(conflict.category, conflict.action, conflict.keycode, false, conflict.index)
     end
 
