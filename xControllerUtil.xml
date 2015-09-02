@@ -23,6 +23,7 @@
         <Event name="MY_PANEL_MANAGER"             bind="OnToggleDefaultUI"     />
         <Event name="XCU_ON_TOGGLE_UI"             bind="OnToggleDefaultUI"     />
         <Event name="ON_DRAGDROP_END"              bind="OnDragDropEnd"         />
+        <Event name="ON_PRE_RELOADUI"              bind="OnPreReloadUI"         />
     </Events>
 
 

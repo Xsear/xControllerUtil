@@ -270,6 +270,15 @@ function OnComponentLoad(args)
     LIB_SLASH.BindCallback({slash_list="redetect,gamepad", description="Attempt to detect active gamepad", func=OnSlashGamepad})
 end
 
+function OnPreReloadUI(args)
+    if DaisyWheel_IsActive() then
+        DaisyWheel_Deactivate()
+    end
+
+    AbilityPizzaDeactivationTrigger()
+end
+
+
 function GetPizzaActivatorAction(pizzaKey)
     return "activate_" .. pizzaKey
 end
