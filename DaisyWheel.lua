@@ -247,8 +247,8 @@ function DaisyWheel_OnComponentLoad()
     NAVWHEEL_NODE:GetIcon():SetTexture("icons", "rotate");
     NAVWHEEL_NODE:SetTitle("Daisy Wheel")   
     NAVWHEEL_NODE:SetAction(function()
-                                DaisyWheel_Activate()
                                 NavWheel.Close()
+                                DaisyWheel_Activate()
                             end)
     NAVWHEEL_NODE:SetParent("hud_root")
 end
@@ -301,6 +301,8 @@ function DaisyWheel_Activate()
 
         -- Set state to active
         g_DaisyState.active = true
+
+        Callback2.FireAndForget(function() Component.GenerateEvent("XCU_ON_TOGGLE_UI", {visible = true}) end, nil, 0.3)
     else
         Debug.Warn("DaisyWheel_Activate called but DaisyWheel was already active.")
     end
