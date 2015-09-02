@@ -246,7 +246,10 @@ function DaisyWheel_OnComponentLoad()
     local NAVWHEEL_NODE = NavWheel.CreateNode()
     NAVWHEEL_NODE:GetIcon():SetTexture("icons", "rotate");
     NAVWHEEL_NODE:SetTitle("Daisy Wheel")   
-    NAVWHEEL_NODE:SetAction(DaisyWheel_Activate)
+    NAVWHEEL_NODE:SetAction(function()
+                                DaisyWheel_Activate()
+                                NavWheel.Close()
+                            end)
     NAVWHEEL_NODE:SetParent("hud_root")
 end
 
