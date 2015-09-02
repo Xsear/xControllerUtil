@@ -278,6 +278,9 @@ function DaisyWheel_Activate()
         CB2_DaisyStateCycle = Callback2.CreateCycle(DaisyStateCycle)
         CB2_DaisyStateCycle:Run(0.25)
 
+        -- Lock Pizza keysets because they are likely bound to dpad :(
+        g_KeySet_PizzaActivators:Activate(false)
+
         -- Activate keysets
         g_KeySet_Daisy_DPAD:Activate(true)
         g_KeySet_Daisy_XYAB:Activate(true)
@@ -321,6 +324,8 @@ function DaisyWheel_Deactivate()
         g_KeySet_Daisy_XYAB:Activate(false)
         Debug.Log("Daisy Keysets Disabled")
 
+        -- Unlock pizza activator keysets
+        g_KeySet_PizzaActivators:Activate(true) -- Todo: This is probably not good
         
         -- Restore Keybinds: For the chat submit button
             -- Unbind submit
