@@ -718,6 +718,10 @@ function OnToggleDefaultUI(args)
         -- Disable activation keybinds
         g_KeySet_PizzaActivators:Activate(false)
 
+        -- Workaround for keyset issues
+        KeySetActiveFix(g_KeySet_Daisy_DPAD)
+        KeySetActiveFix(g_KeySet_Daisy_XYAB)
+
         --Output("Pizza Buttons Disabled")
 
     -- If UI is being hidden, we should re-enable ability pizzas
@@ -735,7 +739,13 @@ function OnToggleDefaultUI(args)
     end
 end
 
-
+-- If two keysets have the same key bound, then activating one of them unbinds the other keyset without "deactivating it", breaking it.
+function KeySetActiveFix(keyset)
+    if keyset:IsActive() then
+        keyset:Activate(false)
+        keyset:Activate(true)
+    end 
+end
 
 
 
