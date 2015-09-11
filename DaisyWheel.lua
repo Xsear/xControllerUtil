@@ -516,6 +516,7 @@ function DaisyDPADInput(args)
 
         -- Now, if when we pressed this key, we paused the opposite axis, we need to undo that
         if g_DaisyPausedOppositeAxis then
+            Output("Unpausing" .. oppositeAxis .. " axis callback as " .. key .. " is released")
             CB2_DaisyDPADInput[oppositeAxis]:Unpause()
             g_DaisyPausedOppositeAxis = false
         end
