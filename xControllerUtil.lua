@@ -211,6 +211,8 @@ g_IsAbilityPizzaActive = false
 g_IsCalldownPizzaActive = false
 g_CurrentlyActiveCalldownPizza = nil
 
+g_ExtraPizzaIndex = 1
+
 -- SIN Notification Timestamp
 g_NotificationsSINTriggerTimestamp = nil
 
@@ -270,6 +272,32 @@ function GetPizzaActivatorSetting(pizzaKey)
     return "activate_" .. pizzaKey .. "_keycode"
 end
 
+
+function RegisterPizzaActivator(pizzaKey)
+    -- Vars
+    local action = GetPizzaActivatorAction(pizzaKey)
+    local setting = GetPizzaActivatorSetting(pizzaKey)
+    local handler = (pizzaKey == "AbilityPizza") and ActivateAbilityPizza or ActivateCalldownPizza -- Note: Ugh :D
+
+    -- Make life easier
+    g_GetPizzaByKeybindAction[action] = pizzaKey
+
+    -- Register
+    g_KeySet_PizzaActivators:RegisterAction(action, handler)
+    
+    -- Bind
+    if Component.GetSetting(setting) then
+        local keyCode = Component.GetSetting(setting)
+        g_KeySet_PizzaActivators:BindKey(action, keyCode)
+    end
+end
+
+function IsKeybindActionAlreadyRegistered(action)
+     --g_KeySet_PizzaActivators:GetKeybinds(action) == nil -- GetPizzaActivatorAction(pizza.key) -- Doesn't work because stupid api function is missing a parameter
+     local export = g_KeySet_PizzaActivators:ExportKeybinds() -- Looksl ike this doesnt do anything to the keybinds, so should be safe
+     return export[action] ~= nil
+end
+
 function SetupUserKeybinds()
 
     -- g_KeySet_PizzaActivators
@@ -278,22 +306,7 @@ function SetupUserKeybinds()
         
         -- Generate from data :D
         for pizzaKey, pizza in pairs(g_Pizzas) do
-            -- Vars
-            local action = GetPizzaActivatorAction(pizzaKey)
-            local setting = GetPizzaActivatorSetting(pizzaKey)
-            local handler = (pizzaKey == "AbilityPizza") and ActivateAbilityPizza or ActivateCalldownPizza -- Note: Ugh :D
-
-            -- Make life easier
-            g_GetPizzaByKeybindAction[action] = pizzaKey
-
-            -- Register
-            g_KeySet_PizzaActivators:RegisterAction(action, handler)
-            
-            -- Bind
-            if Component.GetSetting(setting) then
-                local keyCode = Component.GetSetting(setting)
-                g_KeySet_PizzaActivators:BindKey(action, keyCode)
-            end
+            RegisterPizzaActivator(pizzaKey)
         end
 
         -- Disable while creating the rest of the keybinds
@@ -386,8 +399,10 @@ function SetupOptionsUI()
 
         -- feck the popups yo!
         local pizza = _table.copy(c_Pizza_Base)
-        pizza.name = "Extra "
-        pizza.key = "extra1"
+        pizza.name = "Extra " .. tostring(g_ExtraPizzaIndex)
+        pizza.key = "extra" .. tostring(g_ExtraPizzaIndex)
+        g_ExtraPizzaIndex = g_ExtraPizzaIndex + 1
+        g_Pizzas[pizza.key] = pizza
         pizza.barEntry = CreatePizzaBarEntry(pizza)
         UpdateAbilities()
     end
@@ -442,7 +457,7 @@ end
         local w_barSlots = w_barGroup:GetChild("bar_slots")
 
         -- Set handle focus
-        local KEYCATCHER = Component.CreateWidget([=[<KeyCatcher dimensions="left:0; right:1; top:0; bottom:1;"/>]=], Component.GetWidget("Window"))
+        local KEYCATCHER = Component.CreateWidget([=[<KeyCatcher dimensions="left:0; right:1; top:0; bottom:1;"/>]=], Component.GetWidget("Window")) -- Todo: This seems kinda bad, creating tons of them?
 
         function OnKeyCatch(args)
             Popup_CancelQuestion()
@@ -528,6 +543,9 @@ end
     
         -- Set handle input icon
         w_handleInputIcon = InputIcon.CreateVisual(w_handleInputIconGroup, "Bind")
+        if not IsKeybindActionAlreadyRegistered(GetPizzaActivatorAction(pizza.key)) then -- This is a check to see if the action is registered, other api functions do "assert(action)" so this is how its gonna be
+            RegisterPizzaActivator(pizza.key) -- When adding custom pizzas :)
+        end
         local previousKeyCode = g_KeySet_PizzaActivators:GetKeybind(GetPizzaActivatorAction(pizza.key)) or "blank"
         w_handleInputIcon:SetBind({keycode=previousKeyCode, alt=false}, true)
 
