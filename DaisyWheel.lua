@@ -34,6 +34,37 @@ w_DaisyDPADTextWidgets = {}
 local FRAME = Component.GetFrame("DaisyWheel")
 FRAME:Show(false)
 local DAISY_CONTAINER = Component.GetWidget("DaisyContainer")
+local DAISY_INPUT_CONTAINER = nil
+local DAISY_INPUT_CHANNEL = nil
+local DAISY_INPUT = nil
+
+
+C_ChatlineMaxCharLength = 255
+local c_ChannelPadding = 5
+
+local bp_InputBoxGroup =
+    [[<Group dimensions="left:25%; right:75%-5; bottom:60%; height:20;">
+        <Border dimensions="center-x:50%; center-y:50%; width:100%-2; height:100%-2" class="ButtonSolid" style="tint:#000000; alpha:0.75; padding:4"/> 
+        <Border dimensions="dock:fill" class="ButtonBorder" style="alpha:0.1; exposure:1.0; padding:4"/>
+        <Text name="Channel" dimensions="width:200; left:4; height:100%" class="Chat" style="halign:left; valign:center; alpha:1.0; clip:false; wrap:false" key="{For Initing Height}"/>
+        <TextInput name="ChatInput" dimensions="height:100%; width:100%; left:0; top:0" class="Chat, #TextInput" style="alpha:1.0; valign:center; padding:3; wrap:false; maxlen:]]..C_ChatlineMaxCharLength..[[; texture:colors; region:transparent;">
+            <Events>
+                <OnGotFocus bind="ChatInput_OnGotFocus"/>
+                <OnLostFocus bind="ChatInput_OnLostFocus"/>
+                <OnTextChange bind="ChatInput_OnChatType"/>
+                <OnSubmit bind="ChatInput_OnChatSubmit"/>
+                <OnPrevious bind="ChatInput_OnUpArrow"/>
+                <OnNext bind="ChatInput_OnDownArrow"/>
+                <OnTab bind="ChatInput_OnTabKey"/>
+            </Events>
+        </TextInput>
+        <DropTarget name="DropTarget" dimensions="dock:fill" style="visible:false">
+            <Events>
+                <OnDragDrop bind="ChatInput_OnDragDrop"/>
+            </Events>
+        </DropTarget>
+    </Group>]]
+
 
 local CB2_DaisyDPADInput = {
     ["horizontal"] = nil,
@@ -184,6 +215,7 @@ function DaisyWheel_UserKeybinds()
     g_KeySet_Daisy_XYAB = UserKeybinds.Create()
         g_KeySet_Daisy_XYAB:RegisterAction("daisy_xyab", DaisyXYABInput)
         g_KeySet_Daisy_XYAB:RegisterAction("daisy_space", DaisyXYABInput)
+        g_KeySet_Daisy_XYAB:RegisterAction("daisy_submit", DaisyXYABInput)
         g_KeySet_Daisy_XYAB:RegisterAction("daisy_backspace", DaisyXYABInput, "toggle")
         g_KeySet_Daisy_XYAB:RegisterAction("daisy_caps", DaisyXYABInput, "toggle")
         g_KeySet_Daisy_XYAB:RegisterAction("daisy_numbers", DaisyXYABInput, "toggle")
@@ -191,6 +223,7 @@ function DaisyWheel_UserKeybinds()
             g_KeySet_Daisy_XYAB:BindKey("daisy_xyab", keyCode, i)
         end
         g_KeySet_Daisy_XYAB:BindKey("daisy_space", KEYCODE_GAMEPAD_RIGHT_BUMPER)
+        g_KeySet_Daisy_XYAB:BindKey("daisy_submit", KEYCODE_GAMEPAD_START)
         g_KeySet_Daisy_XYAB:BindKey("daisy_backspace", KEYCODE_GAMEPAD_LEFT_BUMPER)
         g_KeySet_Daisy_XYAB:BindKey("daisy_caps", KEYCODE_GAMEPAD_LEFT_TRIGGER)
         g_KeySet_Daisy_XYAB:BindKey("daisy_numbers", KEYCODE_GAMEPAD_RIGHT_TRIGGER)
@@ -251,6 +284,9 @@ function DaisyWheel_OnComponentLoad()
                                 DaisyWheel_Activate()
                             end)
     NAVWHEEL_NODE:SetParent("hud_root")
+
+    -- Create input box
+    SetupChatInput()
 end
 
 
@@ -270,6 +306,8 @@ end
 function DaisyWheel_Activate()
     Debug.Log("DaisyWheel_Activate")
     if not g_DaisyState.active then
+        ChatInput_OnBeginChat({text=""})
+
         -- Ensure cursor mode so that Chat displays
         Component.SetInputMode("cursor")
         Debug.Log("Cursor mode engaged")
@@ -286,6 +324,7 @@ function DaisyWheel_Activate()
         g_KeySet_Daisy_XYAB:Activate(true)
         Debug.Log("Daisy Keysets Enabled")
 
+        --[[
         -- Override Keybinds: For the chat submit button
             Debug.Log("Overriding keys")
             -- Save overridden keys
@@ -295,12 +334,16 @@ function DaisyWheel_Activate()
             System.BindKey("Social", "OpenChat", KEYCODE_GAMEPAD_START, false, 3)
             System.ApplyKeyBindings()
             Debug.Log("Submit bound")
+        --]]
 
         -- Display Daisy Wheel
         FRAME:Show(true)
 
         -- Set state to active
         g_DaisyState.active = true
+
+        -- Close on submit
+        g_LeaveChatOnSubmit = true
 
         Callback2.FireAndForget(function() Component.GenerateEvent("XCU_ON_TOGGLE_UI", {visible = true}) end, nil, 0.3)
     else
@@ -329,6 +372,7 @@ function DaisyWheel_Deactivate()
         -- Unlock pizza activator keysets
         g_KeySet_PizzaActivators:Activate(true) -- Todo: This is probably not good
         
+        --[[
         -- Restore Keybinds: For the chat submit button
             -- Unbind submit
             System.BindKey("Social", "OpenChat", nil, false, 3)
@@ -340,6 +384,7 @@ function DaisyWheel_Deactivate()
             MassRestoreKeycodes({conflictingKeybinds=g_DaisyOverridenKeybinds})
             g_DaisyOverridenKeybinds = nil
             Debug.Log("Keys restored")
+        --]]
 
         -- Hide Daisy Wheel
         FRAME:Show(false)
@@ -352,7 +397,7 @@ function DaisyWheel_Deactivate()
 end
 
 function DaisyStateCycle()
-    Debug.Log("DaisyStateCycle")
+    --Debug.Log("DaisyStateCycle")
 
     local previousDirection = g_DaisyState.direction
 
@@ -371,14 +416,18 @@ function UpdateDaisyDpadText()
     if not next(w_DaisyDPADTextWidgets) then
         local temp_daisyCount = 0
         for key, value in pairs(g_DaisyState.dpad) do
-            local text = Component.CreateWidget('<Text dimensions="height:100; width:20%; top:200+'..tostring((30*temp_daisyCount))..'" />', FRAME)
+            local text = Component.CreateWidget('<Text dimensions="height:100; width:20%; top:'..tostring(50 + (30*temp_daisyCount))..'" />', FRAME)
             temp_daisyCount = temp_daisyCount + 1
             w_DaisyDPADTextWidgets[key] = text 
         end
+        w_DaisyDPADTextWidgets["direction"] = Component.CreateWidget('<Text dimensions="height:100; width:20%; top:'..tostring(50 + (30*temp_daisyCount))..'" />', FRAME)
+        temp_daisyCount = temp_daisyCount + 1
+        w_DaisyDPADTextWidgets["mode"] = Component.CreateWidget('<Text dimensions="height:100; width:20%; top:'..tostring(50 + (30*temp_daisyCount))..'" />', FRAME)
+        temp_daisyCount = temp_daisyCount + 1
     end
 
     for key, text in pairs(w_DaisyDPADTextWidgets) do
-        local value = g_DaisyState.dpad[key]
+        local value = (key == "mode" and g_DaisyState.mode) or (key == "direction" and g_DaisyState.direction) or g_DaisyState.dpad[key]
         text:SetText(key .. " : " .. tostring(value))
         if value then
             text:SetTextColor("#00ff00")
@@ -542,15 +591,21 @@ daisy_space
 daisy_backspace
 daisy_caps
 daisy_numbers
+daisy_submit
 --]]
 
-    if action == "daisy_backspace" then
+    if action == "daisy_backspace" and args.is_pressed then
+        ChatInput_DoBackspace()
+        --[[
         if g_DaisyPreviouslyTyped ~= "" then
             g_DaisyPreviouslyTyped = unicode.sub(g_DaisyPreviouslyTyped, 1, -2)
             Component.GenerateEvent("MY_BEGIN_CHAT", {text = g_DaisyPreviouslyTyped})
         else
             Output("Nothing to remove!")
         end
+        --]]
+    elseif action == "daisy_submit" then
+        ChatInput_DoSubmit()
 
     elseif action == "daisy_caps" or action == "daisy_numbers" then
 
@@ -578,17 +633,18 @@ daisy_numbers
             if action ~= "daisy_space" and g_DaisyState.direction == "none" then
                 Output("daisy xyab but no direction")
             else
-                local characterTable = fullAlphabetTable[g_DaisyState.mode][g_DaisyState.direction]
                 local character = ""
 
-                if action ~= "daisy_space" then
-                    character = characterTable[PIZZA_KEYBINDINGS_KEYCODE_INDEX[args.keycode]]
-                else
+                if action == "daisy_space" then
                     character = " "
+                else
+                    local characterTable = fullAlphabetTable[g_DaisyState.mode][g_DaisyState.direction]
+                    character = characterTable[PIZZA_KEYBINDINGS_KEYCODE_INDEX[args.keycode]]
                 end
 
-                g_DaisyPreviouslyTyped = g_DaisyPreviouslyTyped .. character
-                ChatLib.AddTextToChatInput({text = character})
+                --g_DaisyPreviouslyTyped = g_DaisyPreviouslyTyped .. character
+                --ChatLib.AddTextToChatInput({text = character})
+                ChatInput_OnAddChatInput({text = character})
             end
         end
     end
@@ -676,3 +732,275 @@ function MassRestoreKeycodes(args)
     System.ApplyKeyBindings()
 end
 
+
+
+-- Chat Input
+    
+function SetupChatInput()
+    DAISY_INPUT_CONTAINER = Component.CreateWidget(bp_InputBoxGroup, FRAME)
+    DAISY_INPUT_CHANNEL = DAISY_INPUT_CONTAINER:GetChild("Channel")
+    DAISY_INPUT = DAISY_INPUT_CONTAINER:GetChild("ChatInput")
+    local font = "UbuntuRegular_9"
+    DAISY_INPUT_CHANNEL:SetFont(font)
+    DAISY_INPUT:SetFont(font)
+    --DROPTARGET = DAISY_INPUT_CONTAINER:GetChild("DropTarget")
+    --DROPTARGET:SetAcceptTypes("item_sdb_id")
+    ChatInput_ChangeChannel("say")
+end
+
+function ChatInput_OnBeginChat(args)
+    -- args = {command:Bool, reply:Bool, text:string}
+    Debug.Event(args)
+    if not g_CursorMode then
+        g_LeaveChatOnSubmit = true
+    end
+    if g_GameMode or g_CursorMode then
+        Component.SetInputMode("cursor")
+    end
+    g_MessageIdx = 0
+    ChatInput_UpdateVisibility(true)
+    Component.SetTextInput(DAISY_INPUT)
+    --DAISY_INPUT:SetFocus()
+    if args.command then
+        ChatInput_ClearInputBox()
+        DAISY_INPUT:SetText("/")
+    elseif args.reply then
+        if #d_WhisperHistory > 0 then
+            g_WhisperIdx = 1
+            ChatInput_ClearInputBox()
+            DAISY_INPUT:SetText("/"..ChatSlash_GetChannelSlash("reply").." ")
+        end
+    elseif args.text then
+        ChatInput_ClearInputBox()
+        DAISY_INPUT:SetText(args.text)
+    end
+end
+
+
+
+function ChatInput_OnGotFocus(args)
+    Debug.Event(args)
+    if not g_InputHasFocus then
+        g_MessageIdx = 0
+        g_InputHasFocus = true
+    end
+    g_ChatMode = true
+end
+
+function ChatInput_OnLostFocus(args)
+    Debug.Event(args)
+    if g_InputHasFocus then
+        g_InputHasFocus = false
+        Component.SetTextInput(nil)
+        DAISY_INPUT:ReleaseFocus()
+        --D_Frames[1].FRAME:ReleaseFocus()
+        Component.SetInputMode(nil)
+        --ChatAutoComplete_Show(false)
+    end
+    g_ChatMode = false
+end
+
+function ChatInput_OnEscape(args)
+    Debug.Event(args)
+    ChatInput_OnLostFocus(args)
+    Component.PostMessage("DragDrop:main", "release_cursor")
+    ChatInput_UpdateVisibility(false)
+    DaisyWheel_Deactivate()
+end
+
+function ChatInput_OnAddChatInput(args)
+    if true or g_CursorMode then
+        if args.json then
+            args = jsontotable(args.json)
+        end
+        local text = DAISY_INPUT:GetText()..args.text
+        DAISY_INPUT:SetText(text)
+        Component.SetTextInput(DAISY_INPUT)
+        if type(args.replaces) == "table" then
+            for _, replace in ipairs(args.replaces) do
+                table.insert(d_CurrentReplaces, replace)
+            end
+        end
+    end
+end
+
+
+function ChatInput_OnChatType(args)
+    Debug.Event(args)
+end
+function ChatInput_OnChatSubmit(args)
+    Debug.Event(args)
+    local text = DAISY_INPUT:GetText()
+    if text ~= "" and unicode.find(text, "%S") then
+        -- see if it's a command
+        if unicode.match(unicode.sub(text,1,2), "/[^%s]+") then
+            local command = unicode.lower(unicode.match(text, "/(%S+)"))
+            --local slash_chat = ChatSlash_SlashLookup(command, "chat", false)
+            --local slash_coms = ChatSlash_SlashLookup(command, "coms")
+            local slash_chat = false
+            local slash_coms = false
+            if unicode.sub(text,1,2) == "//" then-- let the player send a message that starts with a '/'
+                ChatInput_SendMessage(unicode.sub(text, 2))
+            elseif slash_chat then -- CHANNEL COMMANDS
+                if g_Connection[slash_chat] then
+                    ChatInput_ChangeChannel(slash_chat)
+                end
+            elseif slash_coms then -- SLASH COMMANDS
+                local message = unicode.match(text, "^/"..command.."%s+(.+)")
+                if message == nil then message = "" end
+                ChatSlash_FireSlashReply(slash_coms, message)
+            else -- INGAME EMOTES/ANIMATIONS
+                -- Until we have a method to get the list of availible emotes, we will just have to fire and forget blindly
+                Game.SlashCommand(text)
+                
+            end
+        else
+            ChatInput_SendMessage(text)
+        end
+        --lf.LogMessage(text, d_CurrentReplaces)
+    end
+    -- clean up the submission window
+    if g_LeaveChatOnSubmit or text == "" then
+        g_LeaveChatOnSubmit = false
+        ChatInput_OnEscape({event="SUBMIT_EMPTY_STRING"})
+    end
+    ChatInput_ClearInputBox()
+end
+function ChatInput_OnUpArrow(args)
+    Debug.Event(args)
+end
+function ChatInput_OnDownArrow(args)
+    Debug.Event(args)
+end
+function ChatInput_OnTabKey(args)
+    Debug.Event(args)
+end
+
+function ChatInput_OnDragDropBegin()
+    DAISY_INPUT_DROPTARGET:Show()
+end
+
+function ChatInput_OnDragDropEnd()
+    DAISY_INPUT_DROPTARGET:Hide()
+end
+
+function ChatInput_OnDragDrop()
+    local info = DAISY_INPUT_DROPTARGET:GetDropInfo()
+    info = jsontotable(info)
+    local itemInfo = Player.GetItemInfo(info.itemId)
+    ChatLib.AddItemLinkToChatInput(info.itemSdbId, itemInfo.hidden_modules, itemInfo.slotted_modules)
+end
+
+function ChatInput_ClearInputBox()
+    DAISY_INPUT:SetText("")
+end
+
+function ChatInput_IsCursorMode()
+    return g_CursorMode
+end
+
+function ChatInput_UpdateVisibility(bool)
+    if bool then
+        DAISY_INPUT_CONTAINER:ParamTo("alpha", 1, 0.15)
+    else
+        DAISY_INPUT_CONTAINER:ParamTo("alpha", 0.4, 0.15)
+    end
+end
+
+function ChatInput_SendMessage(text, channel)
+    --text = unicode.gsub(text, ChatLib.GetEndcapString(), "")
+    --text = ChatAlias_ProcessAlias(text)
+    --[[
+    for _, tbl in ipairs(d_CurrentReplaces) do
+        -- escape all lua pattern matching magic chars, stupid gsub not having the plain flag like find
+        local match = unicode.gsub(tbl.match, "[%(%)%.%%%+%-%*%?%[%]%^%$]", "%%%0")
+        
+        text = unicode.gsub(text, match, tbl.replace, 1)
+    end
+    --]]
+    text = unicode.gsub(text, "\n", "") --remove forced line breaks from outgoing messages
+    if g_WhisperTo then
+        ChatInput_SendWhisperMessage(g_WhisperTo, text)
+    elseif channel then
+        Chat.SendChannelText(channel, text)
+    elseif g_Channel then
+        Chat.SendChannelText(g_Channel, text)
+    else
+        --OnSystemMessage({key="CHAT_CHANNEL_ERROR"})
+    end
+end
+
+function ChatInput_ChangeChannel(newChannel)
+    assert(type(newChannel) == "string", "ChangeChannel: param1 is not a string")
+    if newChannel == "whisper" then newChannel = "reply" end
+    --[[
+    if g_Connection[newChannel] == nil then
+        warn("Unknown Chat Channel: "..tostring(newChannel))
+        return nil
+    end
+    --]]
+    --[[
+    if newChannel ~= "reply" then
+        if g_TeamId then
+            g_Default.PVP = newChannel
+        else
+            g_Default.PVE = newChannel
+        end
+    end
+    --]]
+    g_Channel = newChannel
+    g_WhisperTo = nil
+    --ChatInput_SetTextColor(g_Channel)
+    --ChatInput_SetChannelText(ChatOptions_GetChannelValue(g_Channel, "Tag"))
+    ChatInput_SetTextColor("#ff0033")
+    ChatInput_SetChannelText("Local")
+end
+
+function ChatInput_SetChannelText(text)
+    if not text and g_ChannelColor and g_ChannelColor ~= "reply" and g_ChannelColor ~= "whisper" then
+        --text = ChatOptions_GetChannelValue(g_ChannelColor, "Tag")
+        text = "Local"
+    end
+    if text then
+        --strip of trailing whitespace from the Channel Tag as the padding here will cover it
+        text = unicode.gsub(text, "%s+$", "")
+        DAISY_INPUT_CHANNEL:SetText(text)
+        AlignInputText()
+    end
+end
+
+function ChatInput_SetTextColor(channel)
+    g_ChannelColor = channel or g_ChannelColor
+    if g_ChannelColor then
+        --local color = ChatOptions_GetChannelValue(g_ChannelColor, "Color")
+        local color = channel
+        DAISY_INPUT_CHANNEL:SetTextColor(color)
+        DAISY_INPUT:SetTextColor(color)
+    end
+end
+
+function ChatInput_SetFont(font)
+    DAISY_INPUT_CHANNEL:SetFont(font)
+    DAISY_INPUT:SetFont(font)
+    AlignInputText()
+end
+
+function AlignInputText()
+    local width = DAISY_INPUT_CHANNEL:GetTextDims().width + c_ChannelPadding
+    DAISY_INPUT_CHANNEL:SetDims("left:0; right:"..width)
+    DAISY_INPUT:SetDims("right:100%; left:"..width)
+end
+
+function ChatInput_DoBackspace()
+    local previousText = DAISY_INPUT:GetText()
+    if previousText ~= "" then
+        local newText = unicode.sub(previousText, 1, -2)
+        DAISY_INPUT:SetText(newText)
+    else
+        Output("Nothing to remove!")
+    end
+end
+
+function ChatInput_DoSubmit()
+    ChatInput_OnChatSubmit()
+end
