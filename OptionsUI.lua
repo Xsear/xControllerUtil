@@ -471,7 +471,7 @@ function CreatePizzaBarEntry(pizza) -- from g_Pizzas
 
     -- Set handle input icon
     w_handleInputIcon = InputIcon.CreateVisual(w_handleInputIconGroup, "Bind")
-    if not IsKeybindActionAlreadyRegistered(GetPizzaActivatorAction(pizza.key)) then -- This is a check to see if the action is registered, other api functions do "assert(action)" so this is how its gonna be
+    if not IsKeysetActionRegistered(g_KeySet_PizzaActivators, GetPizzaActivatorAction(pizza.key)) then -- This is a check to see if the action is registered, other api functions do "assert(action)" so this is how its gonna be
         RegisterPizzaActivator(pizza.key) -- When adding custom pizzas :)
     end
     local previousKeyCode = g_KeySet_PizzaActivators:GetKeybind(GetPizzaActivatorAction(pizza.key)) or "blank"

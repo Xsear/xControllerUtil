@@ -1,4 +1,10 @@
---Pizza.lua
+
+-- ------------------------------------------
+-- Pizza
+-- Why "Pizza"? Originally I called them "Pies", since they are round and have segments.
+-- Then I realized I don't even like Pie, whilst I do love Pizza.
+--   by: Xsear
+-- ------------------------------------------
 
 -- ------------------------------------------
 -- GLOBALS
@@ -117,6 +123,8 @@ w_FosteredBackdrop = nil
 
 function Pizza_OnComponentLoad()
     Debug.Log("Pizza_OnComponentLoad")
+
+    -- Setup keybinds
     Pizza_SetupUserKeybinds()
 
     -- Setup fostered backdrop
@@ -124,9 +132,7 @@ function Pizza_OnComponentLoad()
     w_FosteredBackdrop = Component.CreateWidget('<group dimensions="dock:fill;"/>', FosterFrame)
     Component.FosterWidget("CursorModeBackdrop:CursorModeBackdrop.{1}", w_FosteredBackdrop)
     w_FosteredBackdrop:Show(false)
-
 end
-
 
 function Pizza_SetupUserKeybinds()
 
@@ -177,9 +183,40 @@ function Pizza_SetupUserKeybinds()
 end
 
 
+-- ------------------------------------------
+-- Keyset and keybind helpers
+-- ------------------------------------------
+
+function GetPizzaActivatorAction(pizzaKey)
+    return "activate_" .. pizzaKey
+end
+
+function GetPizzaActivatorSetting(pizzaKey)
+    return "activate_" .. pizzaKey .. "_keycode"
+end
+
+function RegisterPizzaActivator(pizzaKey)
+    -- Vars
+    local action = GetPizzaActivatorAction(pizzaKey)
+    local setting = GetPizzaActivatorSetting(pizzaKey)
+    local handler = Pizza_Activate
+
+    -- Make life easier
+    g_GetPizzaByKeybindAction[action] = pizzaKey
+
+    -- Register
+    g_KeySet_PizzaActivators:RegisterAction(action, handler)
+    
+    -- Bind
+    if Component.GetSetting(setting) then
+        local keyCode = Component.GetSetting(setting)
+        g_KeySet_PizzaActivators:BindKey(action, keyCode)
+    end
+end
+
 
 -- ------------------------------------------
--- Logic
+-- Main Logic
 -- ------------------------------------------
 
 function Pizza_IsActive()
@@ -440,25 +477,16 @@ function UpdatePizzaSlots(pizza)
 end
 
 
-
-
-
-
-
-
-
 -- ------------------------------------------
 -- Widget code
 -- ------------------------------------------
 
 -- Based on CreateSegWheel from Arkii's Invii <3
 function CreatePizza(PARENT, segmentData)
-    Debug.Log("Creating Container")
+    Debug.Table("CreatePizza with segmentData", segmentData)
     local cont = Component.CreateWidget('<Group blueprint="Pizza" dimensions="width:50%; height:50%; center-y:50%; center-x:50%;"></Group>', PARENT)
     local numberOfSegments = 4
     local perSegPrecent = (100/numberOfSegments)
-
-    Debug.Table("Creating pizza with following segmentData: ", segmentData)
 
     for i=1,numberOfSegments do
         local angle = 360 * (perSegPrecent*i)/100 + 90
@@ -470,18 +498,13 @@ function CreatePizza(PARENT, segmentData)
             else
                 SEGMENT:GetChild("icon"):ClearIcon()
             end
-
             if segmentData[i].type ~= "empty" then
                 local inputIcon = InputIcon.CreateVisual(SEGMENT:GetChild("inputIconGroup"), "Bind")
                 local keyCode = ABILITY_PIZZA_KEYBINDINGS_ORDER[i]
                 inputIcon:SetBind({keycode=keyCode, alt=false}, true)
             end
-
         end
     end
-
-    Debug.Log("Pizza created")
-
     return cont
 end
 
@@ -580,36 +603,4 @@ end
 
 
 
-function GetPizzaActivatorAction(pizzaKey)
-    return "activate_" .. pizzaKey
-end
 
-function GetPizzaActivatorSetting(pizzaKey)
-    return "activate_" .. pizzaKey .. "_keycode"
-end
-
-
-function RegisterPizzaActivator(pizzaKey)
-    -- Vars
-    local action = GetPizzaActivatorAction(pizzaKey)
-    local setting = GetPizzaActivatorSetting(pizzaKey)
-    local handler = Pizza_Activate
-
-    -- Make life easier
-    g_GetPizzaByKeybindAction[action] = pizzaKey
-
-    -- Register
-    g_KeySet_PizzaActivators:RegisterAction(action, handler)
-    
-    -- Bind
-    if Component.GetSetting(setting) then
-        local keyCode = Component.GetSetting(setting)
-        g_KeySet_PizzaActivators:BindKey(action, keyCode)
-    end
-end
-
-function IsKeybindActionAlreadyRegistered(action)
-     --g_KeySet_PizzaActivators:GetKeybinds(action) == nil -- GetPizzaActivatorAction(pizza.key) -- Doesn't work because stupid api function is missing a parameter
-     local export = g_KeySet_PizzaActivators:ExportKeybinds() -- Looksl ike this doesnt do anything to the keybinds, so should be safe
-     return export[action] ~= nil
-end

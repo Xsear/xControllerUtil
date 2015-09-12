@@ -292,6 +292,11 @@ function GetPointOnCricle(orginX, orignY, radius, angle)
     return res
 end
 
+function IsKeysetActionRegistered(KEYSET, action_name)
+    local export = KEYSET:ExportKeybinds()
+    return (export[action_name] ~= nil)
+end
+
 
 -- ------------------------------------------
 -- UTILITY/RETURN FUNCTIONS
