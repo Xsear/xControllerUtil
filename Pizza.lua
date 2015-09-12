@@ -179,44 +179,6 @@ end
 
 
 -- ------------------------------------------
--- Widget code
--- ------------------------------------------
-
--- Based on CreateSegWheel from Arkii's Invii <3
-function CreatePizza(PARENT, segmentData)
-    Debug.Log("Creating Container")
-    local cont = Component.CreateWidget('<Group blueprint="Pizza" dimensions="width:50%; height:50%; center-y:50%; center-x:50%;"></Group>', PARENT)
-    local numberOfSegments = 4
-    local perSegPrecent = (100/numberOfSegments)
-
-    Debug.Table("Creating pizza with following segmentData: ", segmentData)
-
-    for i=1,numberOfSegments do
-        local angle = 360 * (perSegPrecent*i)/100 + 90
-        local point = GetPointOnCricle(170, 170-24, RT_SEG_WIDTH*0.30, angle)
-        local SEGMENT = Component.CreateWidget(unicode.format('<Group blueprint="KeyPizzaSegment" dimensions="width:80; height:80; left:%i; top:%i;"></Group>', point.x-20, point.y-20), cont)
-        if (segmentData[i]) then
-            if segmentData[i].type ~= "empty" then
-                SEGMENT:GetChild("icon"):SetIcon(segmentData[i].iconId)
-            else
-                SEGMENT:GetChild("icon"):ClearIcon()
-            end
-
-            if segmentData[i].type ~= "empty" then
-                local inputIcon = InputIcon.CreateVisual(SEGMENT:GetChild("inputIconGroup"), "Bind")
-                local keyCode = ABILITY_PIZZA_KEYBINDINGS_ORDER[i]
-                inputIcon:SetBind({keycode=keyCode, alt=false}, true)
-            end
-
-        end
-    end
-
-    Debug.Log("Pizza created")
-
-    return cont
-end
-
--- ------------------------------------------
 -- Logic
 -- ------------------------------------------
 
@@ -382,61 +344,54 @@ function Pizza_DeactivationTrigger(args)
     end
 end
 
-
-
-
--- Practically UpdatePizzas
-function UpdateAbilities(args)
+function Pizza_UpdateAll(args)
     Debug.Divider()
-    Debug.Log("UpdateAbilities Begin")
+    Debug.Log("Pizza_UpdateAll Begin")
     Debug.Event(args)
 
-    -- Clear exisiting data
-    -- err?
+    -- Make sure we don't have a pizza active when this code runs, that seems dangerous
+    Pizza_DeactivationTrigger(args)
 
-
-    -- New method
-    Debug.Log("It's pizza time!")
+    -- Update each pizza
     for pizzaKey, pizza in pairs(g_Pizzas) do
+        Debug.Log("Updating Pizza with key " .. pizzaKey)
 
-        Debug.Log("Updating " .. pizzaKey)
-
+        -- Update slots
         UpdatePizzaSlots(pizza)
 
+        -- Recreate pizza widget
         pizza.w_PIZZA = {}
         pizza.w_PIZZA = CreatePizza(w_PIZZA_CONTAINER, pizza.slots)
         pizza.w_PIZZA:Show(false)
-        
+            
+        -- Update OptionsUI bar entry
         if pizza.barEntry then
             for i, slot in ipairs(pizza.slots) do
                 UpdatePizzaBarSlotIcon(pizzaKey, i, pizza.barEntry.slotIcons[i])
             end
         end
-
     end 
 
-    -- Update UI
-
-
-    -- Dunno if this is neccessary but w/e
-    w_PIZZA_CONTAINER:Show(true)
-
-    Debug.Log("UpdateAbilities Complete")
+    Debug.Log("Pizza_UpdateAll Complete")
     Debug.Divider()
 end
 
 
 function UpdatePizzaSlots(pizza)
+    Debug.Log("UpdatePizzaSlots data for pizza with key ", pizza.key)
 
+    -- Pizzas with customizable data
     if pizza.isCustom then
         assert(#pizza.slots == 4, "this custom pizza doesnt have 4 slots :s")
+        -- Iterate each slot and update the data
         for slotIndex, slotData in ipairs(pizza.slots) do
-            if not slotData.slotType then
+            -- Try not to leave empty slots with dirty data
+            if slotData.slotType == "empty" or not slotData.slotType then
                 slotData.slotType = "empty"
-            elseif slotData.slotType == "empty" then
                 slotData.itemTypeId = nil
                 slotData.iconId = nil
                 slotData.techId = nil
+            -- Calldown slot
             elseif slotData.slotType == "calldown" then
                 local itemInfo = Game.GetItemInfoByType(slotData.itemTypeId)
                 if slotData.itemTypeId == 0 or not itemInfo or not next(itemInfo) then
@@ -445,43 +400,91 @@ function UpdatePizzaSlots(pizza)
                     slotData.iconId = nil
                     slotData.techId = nil
                 else
+                    slotData.slotType = "calldown"
+                    slotData.itemTypeId = slotData.itemTypeId
                     slotData.iconId = itemInfo.web_icon_id
                     slotData.techId = slotData.itemTypeId
                 end
             end
         end
+
+    -- Pizzas that get their data some other way
     else
-
+        -- Ability Pizza
         if pizza.activationType == "ability_override" then
-
             -- Get current abilities
             local abilities = Player.GetAbilities().slotted
-
-            if not abilities or not next(abilities) then
-                Debug.Warn("Could not get abilities")
-            else
-
+            -- Let's hope we at least got something
+            if abilities then
+                -- Update each slot
                 for slotIndex, slotData in ipairs(pizza.slots) do
-
+                    -- Try to get ability data for this slot
                     local ability = abilities[slotIndex]
-                    
+                    -- If no data, set slot empty
                     if not ability or not next(ability) then
                         slotData.slotType = "empty"
                         slotData.iconId = nil
+                    -- Fill slot with data
                     else
                         local abilityInfo = Player.GetAbilityInfo(ability.abilityId)
                         slotData.slotType = "ability"
                         slotData.iconId = abilityInfo.iconId
                     end
-
                 end
+            -- Warn if we got aboslutely nothing
+            else
+                Debug.Warn("Could not get any abilities")
+            end
+        end
+    end
+end
+
+
+
+
+
+
+
+
+
+-- ------------------------------------------
+-- Widget code
+-- ------------------------------------------
+
+-- Based on CreateSegWheel from Arkii's Invii <3
+function CreatePizza(PARENT, segmentData)
+    Debug.Log("Creating Container")
+    local cont = Component.CreateWidget('<Group blueprint="Pizza" dimensions="width:50%; height:50%; center-y:50%; center-x:50%;"></Group>', PARENT)
+    local numberOfSegments = 4
+    local perSegPrecent = (100/numberOfSegments)
+
+    Debug.Table("Creating pizza with following segmentData: ", segmentData)
+
+    for i=1,numberOfSegments do
+        local angle = 360 * (perSegPrecent*i)/100 + 90
+        local point = GetPointOnCricle(170, 170-24, RT_SEG_WIDTH*0.30, angle)
+        local SEGMENT = Component.CreateWidget(unicode.format('<Group blueprint="KeyPizzaSegment" dimensions="width:80; height:80; left:%i; top:%i;"></Group>', point.x-20, point.y-20), cont)
+        if (segmentData[i]) then
+            if segmentData[i].type ~= "empty" then
+                SEGMENT:GetChild("icon"):SetIcon(segmentData[i].iconId)
+            else
+                SEGMENT:GetChild("icon"):ClearIcon()
+            end
+
+            if segmentData[i].type ~= "empty" then
+                local inputIcon = InputIcon.CreateVisual(SEGMENT:GetChild("inputIconGroup"), "Bind")
+                local keyCode = ABILITY_PIZZA_KEYBINDINGS_ORDER[i]
+                inputIcon:SetBind({keycode=keyCode, alt=false}, true)
             end
 
         end
-
     end
 
+    Debug.Log("Pizza created")
+
+    return cont
 end
+
 
 
 

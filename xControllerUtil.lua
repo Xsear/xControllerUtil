@@ -193,7 +193,7 @@ end
 
 
 function OnPlayerReady(args)
-    UpdateAbilities(args)
+    Pizza_UpdateAll(args)
     if not OptionsUI.haveSetupBars then
         SetupOptionsUIBarList()
         OptionsUI.haveSetupBars = true
@@ -201,7 +201,11 @@ function OnPlayerReady(args)
 end
 
 function OnBattleframeChanged(args)
-    UpdateAbilities(args)
+    Pizza_UpdateAll(args)
+end
+
+function OnAbilitiesChanged(args) -- Fired when you swap abilities on the 3dactionbar (without changing slot)
+    Pizza_UpdateAll(args)
 end
 
 function OnAbilityUsed(args)

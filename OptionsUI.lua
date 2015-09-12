@@ -132,7 +132,7 @@ function AddPizzaButton(args)
     g_ExtraPizzaIndex = g_ExtraPizzaIndex + 1
     g_Pizzas[pizza.key] = pizza
     pizza.barEntry = CreatePizzaBarEntry(pizza)
-    UpdateAbilities()
+    Pizza_UpdateAll()
 end
 
 
@@ -320,7 +320,7 @@ function InsertPizzaSegment(pizzaKey, itemTypeId, segmentIndex)
     Debug.Table("post update slotData", slotData)
 
     -- Trigger pizzas to be updated
-    UpdateAbilities({event="InsertPizzaSegment"})
+    Pizza_UpdateAll({event="InsertPizzaSegment"})
         
     -- Update OptionsUI icon
     UpdatePizzaBarSlotIcon(pizzaKey, segmentIndex)
