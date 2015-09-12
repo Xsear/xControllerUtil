@@ -30,6 +30,8 @@ require "./util/optionsPopupWindow"
 -- Addon
 require "./Pizza"
 require "./OptionsUI"
+require './DaisyWheel'
+
 
 -- ------------------------------------------
 -- CONSTANTS
@@ -105,6 +107,8 @@ g_NotificationsSINTriggerTimestamp = nil
 
 
 
+
+
 -- ------------------------------------------
 -- INTERFACE OPTIONS
 -- ------------------------------------------
@@ -125,9 +129,21 @@ function OnComponentLoad(args)
     -- Options UI
     OptionsUI_OnComponentLoad()
 
+    -- Daisy Wheel
+    DaisyWheel_OnComponentLoad()
+
     -- Slash
     LIB_SLASH.BindCallback({slash_list="xcontrollerutil,xconutil,xcu,cu", description="Controller Utilities", func=OnSlashGeneral})
     LIB_SLASH.BindCallback({slash_list="redetect,gamepad", description="Attempt to detect active gamepad", func=OnSlashGamepad})
+end
+
+
+function OnPreReloadUI(args)
+    if DaisyWheel_IsActive() then
+        DaisyWheel_Deactivate()
+    end
+
+    Pizza_DeactivationTrigger(args)
 end
 
 
@@ -140,8 +156,8 @@ function OnSlashGeneral(args)
 
     if args[1] then
 
-        if args[1] == "something" then
-
+        if args[1] == "daisy" then
+            OnSlashDaisy(args)
         end
 
     else
@@ -174,6 +190,10 @@ function OnToggleDefaultUI(args)
         -- Disable activation keybinds
         g_KeySet_PizzaActivators:Activate(false)
 
+        -- Workaround for keyset issues
+        KeySetActiveFix(g_KeySet_Daisy_DPAD)
+        KeySetActiveFix(g_KeySet_Daisy_XYAB)
+
         --Output("Pizza Buttons Disabled")
 
     -- If UI is being hidden, we should re-enable ability pizzas
@@ -191,6 +211,13 @@ function OnToggleDefaultUI(args)
     end
 end
 
+-- If two keysets have the same key bound, then activating one of them unbinds the other keyset without "deactivating it", breaking it.
+function KeySetActiveFix(KEYSET)
+    if KEYSET:IsActive() then
+        KEYSET:Activate(false)
+        KEYSET:Activate(true)
+    end 
+end
 
 function OnPlayerReady(args)
     Pizza_UpdateAll(args)

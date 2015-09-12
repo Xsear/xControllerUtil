@@ -24,6 +24,7 @@
         <Event name="MY_PANEL_MANAGER"             bind="OnToggleDefaultUI"     />
         <Event name="XCU_ON_TOGGLE_UI"             bind="OnToggleDefaultUI"     />
         <Event name="ON_DRAGDROP_END"              bind="OnDragDropEnd"         />
+        <Event name="ON_PRE_RELOADUI"              bind="OnPreReloadUI"         />
     </Events>
 
 
@@ -116,7 +117,7 @@
 
                     <!-- The background of the whole bar -->
                     <StillArt name="bar_background" dimensions="dock:fill" style="texture:colors; region:white; tint:#666666; alpha:0.2;"/>
-                    
+
                     <!-- Bar border -->
                     <StillArt name="bar_border_background" dimensions="dock:fill" style="texture:colors; region:white; tint:#111111; eatsmice:false"/>
                     <Border name="bar_border" dimensions="dock:fill" class="ButtonBorder" style="tint:#DADADA; alpha:.25 eatsmice:false"/>
@@ -232,7 +233,14 @@
             <OnClose bind="OnClose"/>
             <OnEscape bind="OnClose"/>
         </PanelFrame>
-    
+        
+        <PanelFrame name="DaisyWheel" dimensions="center-y:50%; center-x:50%; width:50%; height:50%;" permanent="true" visible="true" depth="10">
+            <Children>
+                
+                <Group id="DaisyContainer" dimensions="dock:fill"/> <!-- center-y:50%; center-x:50%; width:100%; height:100%; -->
+            </Children>
+        </PanelFrame>
+
     
         <PanelFrame name="Bakery" dimensions="center-y:50%; center-x:50%; width:50%; height:50%;" permanent="true" visible="true" depth="10">
             <Children>
