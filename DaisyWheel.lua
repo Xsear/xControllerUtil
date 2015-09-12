@@ -30,6 +30,8 @@ g_DaisyPreviouslyTyped = ""
 w_DaisyWheelTableWidgets = {}
 w_DaisyDPADTextWidgets = {}
 
+local CB2_DaisyBackspace = nil
+
 
 local FRAME = Component.GetFrame("DaisyWheel")
 FRAME:Show(false)
@@ -291,6 +293,12 @@ function DaisyWheel_OnComponentLoad()
 
     -- Create input box
     SetupChatInput()
+
+
+    -- Backspace Callback2 instance
+    CB2_DaisyBackspace = Callback2.Create()
+    CB2_DaisyBackspace:Bind(ChatInput_DoBackspace, {callback=true})
+
 end
 
 
@@ -598,16 +606,29 @@ daisy_numbers
 daisy_submit
 --]]
 
-    if action == "daisy_backspace" and args.is_pressed then
-        ChatInput_DoBackspace()
-        --[[
-        if g_DaisyPreviouslyTyped ~= "" then
-            g_DaisyPreviouslyTyped = unicode.sub(g_DaisyPreviouslyTyped, 1, -2)
-            Component.GenerateEvent("MY_BEGIN_CHAT", {text = g_DaisyPreviouslyTyped})
-        else
-            Output("Nothing to remove!")
+    if action == "daisy_backspace" then
+
+        if args.is_pressed then
+
+            -- 1-to-1 press to backspace
+            ChatInput_DoBackspace()
+
+            -- Reschedule the hold callback with each press
+            if CB2_DaisyBackspace:Pending() then
+                CB2_DaisyBackspace:Reschedule(0.5)
+            -- Schedule a callback
+            else
+                CB2_DaisyBackspace:Schedule(0.5)
+            end
+
+        elseif args.is_released then
+
+            if CB2_DaisyBackspace:Pending() then
+                CB2_DaisyBackspace:Cancel()
+            end
+
         end
-        --]]
+
     elseif action == "daisy_submit" then
         ChatInput_DoSubmit()
 
@@ -995,14 +1016,17 @@ function AlignInputText()
     DAISY_INPUT:SetDims("right:100%; left:"..width)
 end
 
-function ChatInput_DoBackspace()
+function ChatInput_DoBackspace(args)
+    
     local previousText = DAISY_INPUT:GetText()
     if previousText ~= "" then
         local newText = unicode.sub(previousText, 1, -2)
         DAISY_INPUT:SetText(newText)
+        if args and args.callback then CB2_DaisyBackspace:Schedule(0.05) end
     else
         Output("Nothing to remove!")
     end
+
 end
 
 function ChatInput_DoSubmit()
