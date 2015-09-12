@@ -779,6 +779,10 @@ function UpdatePizzaSlots(pizza)
         for slotIndex, slotData in ipairs(pizza.slots) do
             if not slotData.slotType then
                 slotData.slotType = "empty"
+            elseif slotData.slotType == "empty" then
+                slotData.itemTypeId = nil
+                slotData.iconId = nil
+                slotData.techId = nil
             elseif slotData.slotType == "calldown" then
                 local itemInfo = Game.GetItemInfoByType(slotData.itemTypeId)
                 if slotData.itemTypeId == 0 or not itemInfo or not next(itemInfo) then
