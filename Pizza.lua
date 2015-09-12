@@ -1,5 +1,186 @@
 --Pizza.lua
 
+-- ------------------------------------------
+-- GLOBALS
+-- ------------------------------------------
+
+g_Pizzas = {
+    ["AbilityPizza"] = {
+        name = "Abilities",
+        key = "AbilityPizza",
+        enabled = true,
+        isCustom = false,
+        activationType = "ability_override",
+        slots = {
+            [1] = {},
+            [2] = {},
+            [3] = {},
+            [4] = {},
+        },
+        w_PIZZA = nil,
+    },
+    ["TransportPizza"] = {
+        name = "Transport",
+        key = "TransportPizza",
+        enabled = true,
+        isCustom = true,
+        activationType = "calldown",
+        slots = {
+            [1] = {
+                slotType = "calldown",
+                itemTypeId = 77402, -- Gliderpad
+            },
+            [2] = {
+                slotType = "calldown",
+                itemTypeId = 77402, -- Gliderpad
+            },
+            [3] = {
+                slotType = "empty",
+            },
+            [4] = {
+                slotType = "calldown",
+                itemTypeId = 136981, -- Elite banner
+            },
+        },
+        w_PIZZA = nil,
+    },
+    ["OtherPizza"] = {
+        name = "Other",
+        key = "OtherPizza",
+        enabled = true,
+        isCustom = true,
+        activationType = "calldown",
+        slots = {
+            [1] = {
+                slotType = "calldown",
+                itemTypeId = 30298, -- Gliderpad
+            },
+            [2] = {
+                slotType = "empty",
+            },
+            [3] = {
+                slotType = "calldown",
+                itemTypeId = 54003, -- Detonator
+            },
+            [4] = {
+                slotType = "empty",
+            },
+        },
+        w_PIZZA = nil,
+    },
+}
+
+c_Pizza_Base = {
+    name = "???",
+    key = "better-set-this",
+    enabled = true,
+    isCustom = true,
+    activationType = "calldown",
+    slots = {
+        [1] = {
+                slotType = "empty",
+        },
+        [2] = {
+                slotType = "empty",
+        },
+        [3] = {
+                slotType = "empty",
+        },
+        [4] = {
+                slotType = "empty",
+        },
+    },
+    w_PIZZA = nil
+}
+
+-- Pizza Widget References
+w_PIZZA_CONTAINER = Component.GetWidget("PizzaContainer")
+
+-- Pizza Keysets
+g_KeySet_PizzaActivators = nil
+g_KeySet_PizzaDeactivators = nil
+g_KeySet_CustomPizzaButtons = nil -- Note: Non-custom pizzas will have the same buttons, its just that we need one of these for the custom ones since we don't directly override binds with them.
+
+-- Other pizza related variables
+g_ExtraPizzaIndex = 1 -- Used when creating new pizzas
+g_CurrentlyActivePizza = nil -- Updated to store the currently active pizza key when a pizza is active
+g_GetPizzaByKeybindAction = {} -- Indexed by keybind actions with values of pizza keys
+
+VERY_IMPORTANT_OVERRIDEN_KEYBINDS = nil
+
+-- Fostered chat backdrop widget reference
+w_FosteredBackdrop = nil
+
+-- ------------------------------------------
+-- LOAD
+-- ------------------------------------------
+
+function Pizza_OnComponentLoad()
+    Debug.Log("Pizza_OnComponentLoad")
+    Pizza_SetupUserKeybinds()
+
+    -- Setup fostered backdrop
+    local FosterFrame = Component.GetFrame("FosterFrame")
+    w_FosteredBackdrop = Component.CreateWidget('<group dimensions="dock:fill;"/>', FosterFrame)
+    Component.FosterWidget("CursorModeBackdrop:CursorModeBackdrop.{1}", w_FosteredBackdrop)
+    w_FosteredBackdrop:Show(false)
+
+end
+
+
+function Pizza_SetupUserKeybinds()
+
+    -- g_KeySet_PizzaActivators
+    -- This keyset has one action for each pizza it can activate
+    g_KeySet_PizzaActivators = UserKeybinds.Create()
+        
+        -- Generate from data :D
+        for pizzaKey, pizza in pairs(g_Pizzas) do
+            RegisterPizzaActivator(pizzaKey)
+        end
+
+        -- Disable while creating the rest of the keybinds
+        g_KeySet_PizzaActivators:Activate(false)
+
+
+    -- g_KeySet_PizzaDeactivators
+    -- This keyset is for special buttons that can be pressed when a pizza is active to de-activate it.
+    g_KeySet_PizzaDeactivators = UserKeybinds.Create()
+
+        -- These buttons are hardcoded for now
+        g_KeySet_PizzaDeactivators:RegisterAction("ability_pizza_cancel", Pizza_DeactivationTrigger)
+        for _, keyCode in ipairs(ABILITY_PIZZA_CANCELLATION_KEYS) do
+            g_KeySet_PizzaDeactivators:BindKey("ability_pizza_cancel", keyCode)
+        end
+
+        -- Disable while creating the rest of the keybinds
+        g_KeySet_PizzaDeactivators:Activate(false)
+
+
+    -- g_KeySet_CustomPizzaButtons
+    -- This keyset is used for custom pizzas since we are not replacing default binds with those
+    g_KeySet_CustomPizzaButtons = UserKeybinds.Create()
+
+        -- These buttons are hardcoded for now
+        g_KeySet_CustomPizzaButtons:RegisterAction("press_calldown_pizza_button", Pizza_DeactivationTrigger, "release")
+        for i, keyCode in ipairs(ABILITY_PIZZA_KEYBINDINGS_ORDER) do
+            g_KeySet_CustomPizzaButtons:BindKey("press_calldown_pizza_button", keyCode, i)
+        end
+
+        -- Disable while creating the rest of the keybinds
+        g_KeySet_CustomPizzaButtons:Activate(false)
+
+
+    -- Ready
+    g_KeySet_PizzaActivators:Activate(true)
+
+end
+
+
+
+-- ------------------------------------------
+-- Widget code
+-- ------------------------------------------
 
 -- Based on CreateSegWheel from Arkii's Invii <3
 function CreatePizza(PARENT, segmentData)
@@ -35,58 +216,278 @@ function CreatePizza(PARENT, segmentData)
     return cont
 end
 
+-- ------------------------------------------
+-- Logic
+-- ------------------------------------------
 
-function ActivateAbilityPizza(args)
-    assert(not g_IsAbilityPizzaActive, "waddafak you do, you can't eat two pizzas at once")
-    assert(not g_IsCalldownPizzaActive, "you buffon")
-    assert(w_PIZZA_Abilities, "ehh we got problem")
+function Pizza_IsActive()
+    return (g_CurrentlyActivePizza ~= nil)
+end
 
-    -- Diable activation keybind
-    g_KeySet_PizzaActivators:Activate(false)
+function Pizza_Activate(args)
+    -- Ensure we don't have a pizza active already
+    if not Pizza_IsActive() then
 
-    -- Activate deactivation keybind
-    g_KeySet_PizzaDeactivators:Activate(true)
+        -- Get info
+        local pizzaAction = args.name
+        local pizzaKey = g_GetPizzaByKeybindAction[pizzaAction]
+        local pizza = g_Pizzas[pizzaKey]
+        Debug.Log("Pizza_Activate", pizzaKey)
 
-    -- Do the crazy ability pizza keybind overriding
-    DoTheCrazyAbilityPizzaKeyBindOverriding()
+        -- Toggle activation/deactivation keysets
+        g_KeySet_PizzaActivators:Activate(false)
+        g_KeySet_PizzaDeactivators:Activate(true)
 
-    -- Make some fancy moves
-    w_PIZZA_Abilities:SetParam("alpha", 0, 0.1)
-    w_PIZZA_Abilities:QueueParam("alpha", 1, 0.25, "ease-in")
-    w_PIZZA_Abilities:Show(true)
+        -- Extra activation keyset if calldown
+        if pizza.activationType == "calldown" then
+            g_KeySet_CustomPizzaButtons:Activate(true)
 
-    -- Show the world!
+        -- Override ability keybinds
+        elseif pizza.activationType == "ability_override" then
+            -- Do the crazy ability pizza keybind overriding
+            DoTheCrazyAbilityPizzaKeyBindOverriding()
+        end
+
+        -- Update state
+        g_CurrentlyActivePizza = pizzaKey
+        Debug.Log("g_CurrentlyActivePizza: ", g_CurrentlyActivePizza)
+
+        -- Display pizza
+        pizza.w_PIZZA:SetParam("alpha", 0, 0.1)
+        pizza.w_PIZZA:QueueParam("alpha", 1, 0.25, "ease-in")
+        pizza.w_PIZZA:Show(true)
+        
+        -- Allow Pizza graphics
+        w_PIZZA_CONTAINER:Show(true)
+    else
+        Output("Cannot have more than one pizza at a time!")
+    end
+
+end
+
+function Pizza_Deactivate(args)
+
+    if Pizza_IsActive() then
+
+        -- Get info
+        local triggerKeycode = args.keycode or nil
+        local pizzaKey = g_CurrentlyActivePizza
+        local pizza = g_Pizzas[pizzaKey]
+        Debug.Log("Pizza_Deactivate", pizzaKey)
+
+        -- Trigger calldown if we should
+        if pizza.activationType == "calldown" and triggerKeycode then
+            Debug.Log("Calldown activation by keycode", triggerKeycode, System.GetKeycodeString(triggerKeycode))
+
+            -- Lookup slotIndex for this keycode
+            local slotIndex = PIZZA_KEYBINDINGS_KEYCODE_INDEX[triggerKeycode]
+
+            -- Ensure we have slotIndex
+            if slotIndex then
+
+                -- Get data
+                local techId = 0
+                local slotData = pizza.slots[slotIndex]
+
+                -- Check that slot is valid and get techId
+                if slotData.slotType == "calldown" then
+                    techId = slotData.techId
+                end
+
+                -- Proceed only with the techId
+                if techId ~= 0 then
+                    Debug.Log("Attempt to activate calldown with techId", techId)
+
+                    -- Find consumable item
+                    Debug.Log("Scanning consumables for itemId")
+                    local itemId = nil
+                    local consumables = Player.GetConsumableItems()
+                    for i, consumable in ipairs(consumables) do
+                        if tonumber(consumable.itemTypeId) == tonumber(techId) then
+                            itemId = consumable.abilityId or consumable.itemId
+                            break
+                        end
+                    end
+
+                    -- Proceed only with an itemId
+                    if itemId ~= nil then
+                        Debug.Log("Attempt to activate calldown with techId", techId, "and itemId", itemId)
+                        Debug.Log("Game.CanUIActivateItem(itemId, techId)", tostring(Game.CanUIActivateItem(itemId, techId)))
+
+                        -- Check if the UI will let us activate this kind of item at all
+                        if Game.CanUIActivateItem(itemId, techId) then
+                            -- In order to activate calldowns, we must be in cursor mode... So lets do a driveby!
+                            Debug.Log("Setting cursor mode in order to activate calldown")
+                            w_FosteredBackdrop:Show(false) -- Smooth criminal
+                            Component.SetInputMode("cursor")
+                            Callback2.FireAndForget(Component.SetInputMode, nil, 0.3) -- Hoping that we exit cursor mode even if we error
+                            Callback2.FireAndForget(function(args)
+                                                        Debug.Log("Delayed calldown activation firing")
+                                                        Player.ActivateTech(args.itemId, args.techId)
+                                                        Debug.Log("Calldown activation success")
+                                                        Component.SetInputMode(nil)
+                                                        w_FosteredBackdrop:Show(true)
+                                                    end, {itemId=itemId, techId=techId}, 0.1)
+
+                        else
+                            Output("Sorry, it seems the game does not let the UI activate this calldown at this point of time")
+                        end
+                    else
+                        Output("You don't seem to have any of this consumable in your inventory, so there is nothing to activate")
+                    end
+
+                else
+                    Debug.Log("TechId is 0, so either this keycode isnt in the segmentData (user cancelled the pizza?) or the slot for this keycode doesnt have a calldown in it at the moment. Eitherway we can't activate anything this time.")
+                end
+
+            else
+                Debug.Log("This keycode doesn't refer to a pizza slot, so do nothing")
+            end
+
+        end
+
+        -- Disable extra activation keyset if calldown
+        if pizza.activationType == "calldown" then
+            g_KeySet_CustomPizzaButtons:Activate(false)
+
+        -- Restore overriden ability keybinds
+        elseif pizza.activationType == "ability_override" then
+            -- Undo the crazy ability pizza keybind overriding
+            UndoTheCrazyAbilityPizzaKeyBindOverriding()
+        end
+
+        -- Toggle activation/deactivation keysets
+        g_KeySet_PizzaDeactivators:Activate(false)
+        g_KeySet_PizzaActivators:Activate(true)
+
+        -- Update state
+        g_CurrentlyActivePizza = nil
+        Debug.Log("g_CurrentlyActivePizza: ", g_CurrentlyActivePizza)
+
+        -- Hide pizza
+        pizza.w_PIZZA:Show(false)
+
+        -- Disable Pizza graphics
+        w_PIZZA_CONTAINER:Show(false)
+    else
+        Output("Cannot deactivate a pizza if there isn't one activated!")
+    end
+
+
+end
+
+function Pizza_DeactivationTrigger(args)
+    if Pizza_IsActive() then
+        Pizza_Deactivate(args)
+    end
+end
+
+
+
+
+-- Practically UpdatePizzas
+function UpdateAbilities(args)
+    Debug.Divider()
+    Debug.Log("UpdateAbilities Begin")
+    Debug.Event(args)
+
+    -- Clear exisiting data
+    -- err?
+
+
+    -- New method
+    Debug.Log("It's pizza time!")
+    for pizzaKey, pizza in pairs(g_Pizzas) do
+
+        Debug.Log("Updating " .. pizzaKey)
+
+        UpdatePizzaSlots(pizza)
+
+        pizza.w_PIZZA = {}
+        pizza.w_PIZZA = CreatePizza(w_PIZZA_CONTAINER, pizza.slots)
+        pizza.w_PIZZA:Show(false)
+        
+        if pizza.barEntry then
+            for i, slot in ipairs(pizza.slots) do
+                UpdatePizzaBarSlotIcon(pizzaKey, i, pizza.barEntry.slotIcons[i])
+            end
+        end
+
+    end 
+
+    -- Update UI
+
+
+    -- Dunno if this is neccessary but w/e
     w_PIZZA_CONTAINER:Show(true)
 
-    -- Baka almost forgot
-    g_IsAbilityPizzaActive = true
-
-    --Output("Activated Ability Pizza")
-end
-
-function DeactivateAbilityPizza(args)
-    assert(g_IsAbilityPizzaActive, "pluto isn't a planet")
-
-    -- Undo the crazy ability pizza keybind overriding
-    UndoTheCrazyAbilityPizzaKeyBindOverriding()
-
-    -- Usagi chirichiri~
-    w_PIZZA_Abilities:Show(false)
-    w_PIZZA_CONTAINER:Show(false)
-
-    -- Disable deactivation keyset
-    g_KeySet_PizzaDeactivators:Activate(false)
-    
-    -- Enable activation keyset
-    g_KeySet_PizzaActivators:Activate(true)
-
-    -- Update that thing and RIP keybinds
-    g_IsAbilityPizzaActive = false
-
-    --Output("Deactivated Ability Pizza")
+    Debug.Log("UpdateAbilities Complete")
+    Debug.Divider()
 end
 
 
+function UpdatePizzaSlots(pizza)
+
+    if pizza.isCustom then
+        assert(#pizza.slots == 4, "this custom pizza doesnt have 4 slots :s")
+        for slotIndex, slotData in ipairs(pizza.slots) do
+            if not slotData.slotType then
+                slotData.slotType = "empty"
+            elseif slotData.slotType == "empty" then
+                slotData.itemTypeId = nil
+                slotData.iconId = nil
+                slotData.techId = nil
+            elseif slotData.slotType == "calldown" then
+                local itemInfo = Game.GetItemInfoByType(slotData.itemTypeId)
+                if slotData.itemTypeId == 0 or not itemInfo or not next(itemInfo) then
+                    slotData.slotType = "empty"
+                    slotData.itemTypeId = nil
+                    slotData.iconId = nil
+                    slotData.techId = nil
+                else
+                    slotData.iconId = itemInfo.web_icon_id
+                    slotData.techId = slotData.itemTypeId
+                end
+            end
+        end
+    else
+
+        if pizza.activationType == "ability_override" then
+
+            -- Get current abilities
+            local abilities = Player.GetAbilities().slotted
+
+            if not abilities or not next(abilities) then
+                Debug.Warn("Could not get abilities")
+            else
+
+                for slotIndex, slotData in ipairs(pizza.slots) do
+
+                    local ability = abilities[slotIndex]
+                    
+                    if not ability or not next(ability) then
+                        slotData.slotType = "empty"
+                        slotData.iconId = nil
+                    else
+                        local abilityInfo = Player.GetAbilityInfo(ability.abilityId)
+                        slotData.slotType = "ability"
+                        slotData.iconId = abilityInfo.iconId
+                    end
+
+                end
+            end
+
+        end
+
+    end
+
+end
+
+
+
+
+
+-- Todo: Replace these outliers with standardized functions written on the Daisy branch
 function DoTheCrazyAbilityPizzaKeyBindOverriding(args)
     Debug.Log("Doing the crazy ability pizza keybind overriding!")
 
@@ -146,7 +547,7 @@ function DoTheCrazyAbilityPizzaKeyBindOverriding(args)
     Debug.Log("Okay, we're now in the crazy ability pizza keybinding override state.")
 end
 
-
+-- Todo: Replace these outliers with standardized functions written on the Daisy branch
 function UndoTheCrazyAbilityPizzaKeyBindOverriding(args)
     Debug.Log("Okay settle down, we're gonna undo the crazy ability pizza keybind overriding now")
 
@@ -173,219 +574,39 @@ end
 
 
 
-function ActivateCalldownPizza(args)
-    Debug.Table("ActivateCalldownPizza", args)
 
 
-    if not g_IsCalldownPizzaActive and not g_IsAbilityPizzaActive then
 
-        Debug.Log("Opening calldown pizza")
-
-        g_KeySet_PizzaActivators:Activate(false)
-        g_KeySet_PizzaDeactivators:Activate(true)
-        g_KeySet_CustomPizzaButtons:Activate(true)
-
-        g_CurrentlyActiveCalldownPizza = g_GetPizzaByKeybindAction[args.name]
-        Debug.Log("g_CurrentlyActiveCalldownPizza: ", g_CurrentlyActiveCalldownPizza)
-        g_IsCalldownPizzaActive = true
-
-        g_Pizzas[g_CurrentlyActiveCalldownPizza].w_PIZZA:SetParam("alpha", 0, 0.1)
-        g_Pizzas[g_CurrentlyActiveCalldownPizza].w_PIZZA:QueueParam("alpha", 1, 0.25, "ease-in")
-        g_Pizzas[g_CurrentlyActiveCalldownPizza].w_PIZZA:Show(true)
-        w_PIZZA_CONTAINER:Show(true)
-
-    end
+function GetPizzaActivatorAction(pizzaKey)
+    return "activate_" .. pizzaKey
 end
 
-function DeactivateCalldownPizza(args)
-    Debug.Table("DeactivateCalldownPizza", args)
-
-
-    if g_IsCalldownPizzaActive then
-
-        Debug.Log("Closing calldown pizza")
-
-        if args.keycode then
-
-            -- This is it, do the thing!
-            Debug.Log("We have a keycode, check if its one of the buttons")
-            Debug.Log("Our keycode is " .. tostring(args.keycode) .. " ( " .. System.GetKeycodeString(args.keycode) .. ") ")
-
-            local slotIndex = PIZZA_KEYBINDINGS_KEYCODE_INDEX[args.keycode]
-
-            if slotIndex then
-
-                local techId = 0
-                local slotData = g_Pizzas[g_CurrentlyActiveCalldownPizza].slots[slotIndex]
-                if slotData.slotType == "calldown" then
-                    techId = slotData.techId
-                    Debug.Log("Found match! Tech id is " .. tostring(techId))
-                end
-
-                if techId ~= 0 then
-                    Debug.Log("Now scannining consumables")
-                    local itemId = nil
-                    local consumables = Player.GetConsumableItems()
-                    Debug.Table("consumables", consumables)
-                    for i, consumable in ipairs(consumables) do
-                        if tonumber(consumable.itemTypeId) == tonumber(techId) then
-                            itemId = consumable.abilityId or consumable.itemId
-                            Debug.Log("Found match! itemId is " .. tostring(itemId))
-                            break
-                        end
-                    end
-                    if itemId ~= nil then
-                        Debug.Log("ActivateTech time!")
-                        Debug.Log("but can we? : Game.CanUIActivateItem ", tostring(Game.CanUIActivateItem(itemId, techId)))
-                        --Player.ActivateTech(itemId, techId)
-                        if Game.CanUIActivateItem(itemId, techId) then
-                            -- TODO: Fix this shit
-                            local FosterFrame = Component.GetFrame("FosterFrame")
-                            local FosteredBackdrop = Component.CreateWidget('<group dimensions="dock:fill;"/>', FosterFrame)
-                            Component.FosterWidget("CursorModeBackdrop:CursorModeBackdrop.{1}", FosteredBackdrop)
-                            FosteredBackdrop:Show(false)
-
-                            Component.SetInputMode("cursor")
-                            Callback2.FireAndForget(Component.SetInputMode, nil, 0.3) -- saftey
-                            Callback2.FireAndForget(function(args) Player.ActivateTech(args.itemId, args.techId) Component.SetInputMode(nil) FosteredBackdrop:Show(true) end, {itemId=itemId, techId=techId}, 0.1)
-                        end
-
-                    end
-
-
-                else
-                    Debug.Log("TechId is 0, so either this keycode isnt in the segmentData (user cancelled the pizza) or the slot for this keycode doesnt have a calldown in it at the moment. Eitherway we cant activate anything this time.")
-                end
-
-            else
-
-                Debug.Log("This keycode wasnt one of the calldown buttons, so do nothing")
-
-            end
-
-        end
-
-
-
-        g_Pizzas[g_CurrentlyActiveCalldownPizza].w_PIZZA:Show(false)
-        w_PIZZA_CONTAINER:Show(false)
-
-
-        g_KeySet_CustomPizzaButtons:Activate(false)
-        g_KeySet_PizzaDeactivators:Activate(false)
-        g_KeySet_PizzaActivators:Activate(true)
-
-        g_CurrentlyActiveCalldownPizza = nil
-        g_IsCalldownPizzaActive = false
-    end
-end
-
--- Practically UpdatePizzas
-function UpdateAbilities(args)
-    Debug.Divider()
-    Debug.Log("UpdateAbilities Begin")
-    Debug.Event(args)
-
-    -- Clear exisiting data
-    -- err?
-
-
-    -- New method
-    Debug.Log("It's pizza time!")
-    for pizzaKey, pizza in pairs(g_Pizzas) do
-
-        Debug.Log("Updating " .. pizzaKey)
-
-        UpdatePizzaSlots(pizza)
-
-        pizza.w_PIZZA = {}
-        pizza.w_PIZZA = CreatePizza(w_PIZZA_CONTAINER, pizza.slots)
-        pizza.w_PIZZA:Show(false)
-        
-        if pizza.barEntry then
-            for i, slot in ipairs(pizza.slots) do
-                UpdatePizzaBarSlotIcon(pizzaKey, i, pizza.barEntry.slotIcons[i])
-            end
-        end
-
-    end 
-
-    -- Update UI
-
-
-    -- Chill hack :D
-    w_PIZZA_Abilities = g_Pizzas["AbilityPizza"].w_PIZZA
-
-    -- Dunno if this is neccessary but w/e
-    w_PIZZA_CONTAINER:Show(true)
-
-    Debug.Log("UpdateAbilities Complete")
-    Debug.Divider()
-end
-
-function AbilityPizzaDeactivationTrigger(args)
-    --Debug.Event(args)
-    if g_IsAbilityPizzaActive then
-        DeactivateAbilityPizza(args)
-    elseif g_IsCalldownPizzaActive then
-        DeactivateCalldownPizza(args)
-    end
+function GetPizzaActivatorSetting(pizzaKey)
+    return "activate_" .. pizzaKey .. "_keycode"
 end
 
 
-function UpdatePizzaSlots(pizza)
+function RegisterPizzaActivator(pizzaKey)
+    -- Vars
+    local action = GetPizzaActivatorAction(pizzaKey)
+    local setting = GetPizzaActivatorSetting(pizzaKey)
+    local handler = Pizza_Activate
 
-    if pizza.isCustom then
-        assert(#pizza.slots == 4, "this custom pizza doesnt have 4 slots :s")
-        for slotIndex, slotData in ipairs(pizza.slots) do
-            if not slotData.slotType then
-                slotData.slotType = "empty"
-            elseif slotData.slotType == "empty" then
-                slotData.itemTypeId = nil
-                slotData.iconId = nil
-                slotData.techId = nil
-            elseif slotData.slotType == "calldown" then
-                local itemInfo = Game.GetItemInfoByType(slotData.itemTypeId)
-                if slotData.itemTypeId == 0 or not itemInfo or not next(itemInfo) then
-                    slotData.slotType = "empty"
-                    slotData.itemTypeId = nil
-                    slotData.iconId = nil
-                    slotData.techId = nil
-                else
-                    slotData.iconId = itemInfo.web_icon_id
-                    slotData.techId = slotData.itemTypeId
-                end
-            end
-        end
-    else
+    -- Make life easier
+    g_GetPizzaByKeybindAction[action] = pizzaKey
 
-        if pizza.activationType == "ability_override" then
-
-            -- Get current abilities
-            local abilities = Player.GetAbilities().slotted
-
-            if not abilities or not next(abilities) then
-                Debug.Warn("Could not get abilities")
-            else
-
-                for slotIndex, slotData in ipairs(pizza.slots) do
-
-                    local ability = abilities[slotIndex]
-                    
-                    if not ability or not next(ability) then
-                        slotData.slotType = "empty"
-                        slotData.iconId = nil
-                    else
-                        local abilityInfo = Player.GetAbilityInfo(ability.abilityId)
-                        slotData.slotType = "ability"
-                        slotData.iconId = abilityInfo.iconId
-                    end
-
-                end
-            end
-
-        end
-
+    -- Register
+    g_KeySet_PizzaActivators:RegisterAction(action, handler)
+    
+    -- Bind
+    if Component.GetSetting(setting) then
+        local keyCode = Component.GetSetting(setting)
+        g_KeySet_PizzaActivators:BindKey(action, keyCode)
     end
+end
 
+function IsKeybindActionAlreadyRegistered(action)
+     --g_KeySet_PizzaActivators:GetKeybinds(action) == nil -- GetPizzaActivatorAction(pizza.key) -- Doesn't work because stupid api function is missing a parameter
+     local export = g_KeySet_PizzaActivators:ExportKeybinds() -- Looksl ike this doesnt do anything to the keybinds, so should be safe
+     return export[action] ~= nil
 end

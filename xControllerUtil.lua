@@ -39,8 +39,6 @@ REDETECTION_DELAY_SECONDS = 1
 
 SIN_ABILITY_ID = "43"
 
-DRAG_ORIGIN_CU = "xcontrollerutil"
-DRAG_ORIGIN_ACTIONBAR = "3dactionbar"
 
 KEYCODE_GAMEPAD_START = 270
 KEYCODE_GAMEPAD_BACK = 271
@@ -101,137 +99,8 @@ SUPER_CALLDOWN_PIZZA_KEYBINDINGS = {
 -- GLOBALS
 -- ------------------------------------------
 
--- Pizza Data
-g_Pizzas = {
-    ["AbilityPizza"] = {
-        name = "Abilities",
-        key = "AbilityPizza",
-        enabled = true,
-        isCustom = false,
-        activationType = "ability_override",
-        slots = {
-            [1] = {},
-            [2] = {},
-            [3] = {},
-            [4] = {},
-        },
-        w_PIZZA = nil,
-    },
-    ["TransportPizza"] = {
-        name = "Transport",
-        key = "TransportPizza",
-        enabled = true,
-        isCustom = true,
-        activationType = "calldown",
-        slots = {
-            [1] = {
-                slotType = "calldown",
-                itemTypeId = 77402, -- Gliderpad
-            },
-            [2] = {
-                slotType = "calldown",
-                itemTypeId = 77402, -- Gliderpad
-            },
-            [3] = {
-                slotType = "empty",
-            },
-            [4] = {
-                slotType = "calldown",
-                itemTypeId = 136981, -- Elite banner
-            },
-        },
-        w_PIZZA = nil,
-    },
-    ["OtherPizza"] = {
-        name = "Other",
-        key = "OtherPizza",
-        enabled = true,
-        isCustom = true,
-        activationType = "calldown",
-        slots = {
-            [1] = {
-                slotType = "calldown",
-                itemTypeId = 30298, -- Gliderpad
-            },
-            [2] = {
-                slotType = "empty",
-            },
-            [3] = {
-                slotType = "calldown",
-                itemTypeId = 54003, -- Detonator
-            },
-            [4] = {
-                slotType = "empty",
-            },
-        },
-        w_PIZZA = nil,
-    },
-}
-
-c_Pizza_Base = {
-    name = "???",
-    key = "better-set-this",
-    enabled = true,
-    isCustom = true,
-    activationType = "calldown",
-    slots = {
-        [1] = {
-                slotType = "empty",
-        },
-        [2] = {
-                slotType = "empty",
-        },
-        [3] = {
-                slotType = "empty",
-        },
-        [4] = {
-                slotType = "empty",
-        },
-    },
-    w_PIZZA = nil
-}
-
--- Pizza Widget References
-w_PIZZA_CONTAINER = Component.GetWidget("PizzaContainer")
-w_PIZZA_Abilities = g_Pizzas["AbilityPizza"].w_PIZZA -- Shortcut (temp?)
-
--- Pizza Keysets
-g_KeySet_PizzaActivators = nil
-g_KeySet_PizzaDeactivators = nil
-g_KeySet_CustomPizzaButtons = nil -- Note: Non-custom pizzas will have the same buttons, its just that we need one of these for the custom ones since we don't directly override binds with them.
-
-g_GetPizzaByKeybindAction = {}
-
--- Other pizza related variables
-VERY_IMPORTANT_OVERRIDEN_KEYBINDS = nil
-g_IsAbilityPizzaActive = false
-g_IsCalldownPizzaActive = false
-g_CurrentlyActiveCalldownPizza = nil
-
-g_ExtraPizzaIndex = 1
-
 -- SIN Notification Timestamp
 g_NotificationsSINTriggerTimestamp = nil
-
-
--- Options UI References
-OptionsUI = {
-    MAIN = Component.GetFrame("Options"),
-    WINDOW = Component.GetWidget("Window"),
-    MOVABLE_PARENT = Component.GetWidget("MovableParent"),
-    CLOSE_BUTTON = Component.GetWidget("close"),
-    TITLE_TEXT = Component.GetWidget("title"),
-    PANES = Component.GetWidget("Panes"),
-    PANE_MAIN,
-        PANE_MAIN_LAYOUT,
-        PANE_MAIN_LEFT_COLUMN,
-        PANE_MAIN_MAIN_AREA,
-        PANE_MAIN_MAIN_AREA_LIST,
-    PANE_SECOND,
-        PANE_SECOND_LAYOUT,
-    POPUP,
-    haveSetupBars = false,
-}
 
 
 
@@ -250,97 +119,15 @@ function OnComponentLoad(args)
     -- Debug
     Debug.EnableLogging(true)
 
-    -- User Keybinds
-    SetupUserKeybinds()
+    -- Pizza
+    Pizza_OnComponentLoad()
 
     -- Options UI
-    SetupOptionsUI()
+    OptionsUI_OnComponentLoad()
 
     -- Slash
     LIB_SLASH.BindCallback({slash_list="xcontrollerutil,xconutil,xcu,cu", description="Controller Utilities", func=OnSlashGeneral})
     LIB_SLASH.BindCallback({slash_list="redetect,gamepad", description="Attempt to detect active gamepad", func=OnSlashGamepad})
-end
-
-function GetPizzaActivatorAction(pizzaKey)
-    return "activate_" .. pizzaKey
-end
-
-function GetPizzaActivatorSetting(pizzaKey)
-    return "activate_" .. pizzaKey .. "_keycode"
-end
-
-
-function RegisterPizzaActivator(pizzaKey)
-    -- Vars
-    local action = GetPizzaActivatorAction(pizzaKey)
-    local setting = GetPizzaActivatorSetting(pizzaKey)
-    local handler = (pizzaKey == "AbilityPizza") and ActivateAbilityPizza or ActivateCalldownPizza -- Note: Ugh :D
-
-    -- Make life easier
-    g_GetPizzaByKeybindAction[action] = pizzaKey
-
-    -- Register
-    g_KeySet_PizzaActivators:RegisterAction(action, handler)
-    
-    -- Bind
-    if Component.GetSetting(setting) then
-        local keyCode = Component.GetSetting(setting)
-        g_KeySet_PizzaActivators:BindKey(action, keyCode)
-    end
-end
-
-function IsKeybindActionAlreadyRegistered(action)
-     --g_KeySet_PizzaActivators:GetKeybinds(action) == nil -- GetPizzaActivatorAction(pizza.key) -- Doesn't work because stupid api function is missing a parameter
-     local export = g_KeySet_PizzaActivators:ExportKeybinds() -- Looksl ike this doesnt do anything to the keybinds, so should be safe
-     return export[action] ~= nil
-end
-
-function SetupUserKeybinds()
-
-    -- g_KeySet_PizzaActivators
-    -- This keyset has one action for each pizza it can activate
-    g_KeySet_PizzaActivators = UserKeybinds.Create()
-        
-        -- Generate from data :D
-        for pizzaKey, pizza in pairs(g_Pizzas) do
-            RegisterPizzaActivator(pizzaKey)
-        end
-
-        -- Disable while creating the rest of the keybinds
-        g_KeySet_PizzaActivators:Activate(false)
-
-
-    -- g_KeySet_PizzaDeactivators
-    -- This keyset is for special buttons that can be pressed when a pizza is active to de-activate it.
-    g_KeySet_PizzaDeactivators = UserKeybinds.Create()
-
-        -- These buttons are hardcoded for now
-        g_KeySet_PizzaDeactivators:RegisterAction("ability_pizza_cancel", AbilityPizzaDeactivationTrigger)
-        for _, keyCode in ipairs(ABILITY_PIZZA_CANCELLATION_KEYS) do
-            g_KeySet_PizzaDeactivators:BindKey("ability_pizza_cancel", keyCode)
-        end
-
-        -- Disable while creating the rest of the keybinds
-        g_KeySet_PizzaDeactivators:Activate(false)
-
-
-    -- g_KeySet_CustomPizzaButtons
-    -- This keyset is used for custom pizzas since we are not replacing default binds with those
-    g_KeySet_CustomPizzaButtons = UserKeybinds.Create()
-
-        -- These buttons are hardcoded for now
-        g_KeySet_CustomPizzaButtons:RegisterAction("press_calldown_pizza_button", DeactivateCalldownPizza, "release")
-        for i, keyCode in ipairs(ABILITY_PIZZA_KEYBINDINGS_ORDER) do
-            g_KeySet_CustomPizzaButtons:BindKey("press_calldown_pizza_button", keyCode, i)
-        end
-
-        -- Disable while creating the rest of the keybinds
-        g_KeySet_CustomPizzaButtons:Activate(false)
-
-
-    -- Ready
-    g_KeySet_PizzaActivators:Activate(true)
-
 end
 
 
@@ -382,7 +169,7 @@ function OnToggleDefaultUI(args)
     if show then
 
         -- In case pizzas are shown, deactivate them
-        AbilityPizzaDeactivationTrigger(args)
+        Pizza_DeactivationTrigger(args)
 
         -- Disable activation keybinds
         g_KeySet_PizzaActivators:Activate(false)
@@ -403,9 +190,6 @@ function OnToggleDefaultUI(args)
 
     end
 end
-
-
-
 
 
 function OnPlayerReady(args)
@@ -443,17 +227,17 @@ function OnAbilityUsed(args)
 
     -- Normal logic
     else
-        AbilityPizzaDeactivationTrigger(args)
+        Pizza_DeactivationTrigger(args)
     end
 
 end
 
 function OnAbilityFailed(args)
-    AbilityPizzaDeactivationTrigger(args)
+    Pizza_DeactivationTrigger(args)
 end
 
 function OnPlaceCalldown(args)
-    AbilityPizzaDeactivationTrigger(args)
+    Pizza_DeactivationTrigger(args)
 end
 
 
@@ -472,12 +256,6 @@ function ToggleOptionsUI(args)
     else
         PanelManager.OnHide(OptionsUI.MAIN)
     end
-end
-
-
-
-function ActivateControllerKeyboard(args)
-    X360.DisplayKeyboardUI()
 end
 
 function DetectActiveGamepad(args)
@@ -501,8 +279,6 @@ function TriggerNotificationUI(args)
     Component.GenerateEvent("MY_NOTIFICATION_TOGGLE", {show=true})
 end
 
-
-
 -- Arkii did the maths <3
 function GetPointOnCricle(orginX, orignY, radius, angle)
     local res = { x = 0, y = 0 }
@@ -511,16 +287,6 @@ function GetPointOnCricle(orginX, orignY, radius, angle)
 
     return res
 end
-
-
-
-
-
-
-
-
-
-
 
 
 -- ------------------------------------------
