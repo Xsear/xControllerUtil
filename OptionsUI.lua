@@ -1,4 +1,8 @@
---OptionsUI.lua
+
+-- ------------------------------------------
+-- OptionsUI
+--   by: Xsear
+-- ------------------------------------------
 
 -- ------------------------------------------
 -- CONSTANTS
@@ -12,7 +16,7 @@ DRAG_ORIGIN_ACTIONBAR = "3dactionbar"
 -- GLOBALS
 -- ------------------------------------------
 
--- Options UI References
+-- References
 OptionsUI = {
     MAIN = Component.GetFrame("Options"),
     WINDOW = Component.GetWidget("Window"),
@@ -48,6 +52,17 @@ function OptionsUI_OnComponentLoad()
         MOVABLE_PARENT = OptionsUI.MOVABLE_PARENT
     })
 
+    -- Setup the Window
+    SetupWindow()
+
+    -- Setup the Pizza Config Pane
+    SetupPizzaConfigPane()
+ 
+    -- Create layout for Second Pane
+    OptionsUI.PANE_SECOND_LAYOUT = Component.CreateWidget("PaneLayoutMain", OptionsUI.PANE_SECOND)
+end
+
+function SetupWindow()
     -- Setup close button
     local X = OptionsUI.CLOSE_BUTTON:GetChild("X");
     OptionsUI.CLOSE_BUTTON:BindEvent("OnMouseDown", function() ToggleOptionsUI({show=false}) end)
@@ -74,67 +89,57 @@ function OptionsUI_OnComponentLoad()
 
     -- Default to first tab
     OptionsUI.TABS:Select(1)
+end
 
-    -- Create layout for Main Pane
+
+function SetupPizzaConfigPane()
+    -- Create layout for Main Pane and setup early references
     OptionsUI.PANE_MAIN_LAYOUT = Component.CreateWidget("PaneLayoutMain", OptionsUI.PANE_MAIN)
     OptionsUI.PANE_MAIN_LEFT_COLUMN = OptionsUI.PANE_MAIN_LAYOUT:GetChild("LeftColumn")
     OptionsUI.PANE_MAIN_MAIN_AREA = OptionsUI.PANE_MAIN_LAYOUT:GetChild("MainArea")
     OptionsUI.PANE_MAIN_MAIN_AREA_LIST = OptionsUI.PANE_MAIN_MAIN_AREA:GetChild("List")
 
-
-    
+    -- Create left column menu buttons
     OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON = Component.CreateWidget('<Button id="CreatePizzaButton" key="{Add Pizza}" dimensions="left:10.25; width:100%-20.5; top:2.5%; height:75"/>', OptionsUI.PANE_MAIN_LEFT_COLUMN)
     OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON:BindEvent("OnMouseDown", AddPizzaButton)
 
     OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON5 = Component.CreateWidget('<Button id="RedetectButton" key="{Redetect Controllers}" dimensions="left:10.25; width:100%-20.5; bottom:97.5%; height:75"/>', OptionsUI.PANE_MAIN_LEFT_COLUMN)
     OptionsUI.PANE_MAIN_LEFT_COLUMN_BUTTON5:BindEvent("OnMouseDown", DetectActiveGamepad)
 
-
-
-    -- List
-
+    -- Create Pizza Bar list
     local DimensionOptions = {
         ScrollerSpacing = 8,
         ScrollerSliderMarginVisible = 15,
         ScrollerSliderMarginHidden = 15,
     }
-
     OptionsUI.PANE_MAIN_MAIN_AREA_LIST_ROWSCROLLER = RowScroller.Create(OptionsUI.PANE_MAIN_MAIN_AREA_LIST)
     OptionsUI.PANE_MAIN_MAIN_AREA_LIST_ROWSCROLLER:SetSlider(Component.CreateWidget('<Slider name="Slider" dimensions="width:3; right:100%; top:0; bottom:100%"/>', OptionsUI.PANE_MAIN_MAIN_AREA_LIST))
     OptionsUI.PANE_MAIN_MAIN_AREA_LIST_ROWSCROLLER:SetSliderMargin(DimensionOptions.ScrollerSliderMarginVisible, DimensionOptions.ScrollerSliderMarginHidden)
     OptionsUI.PANE_MAIN_MAIN_AREA_LIST_ROWSCROLLER:SetSpacing(DimensionOptions.ScrollerSpacing)
     OptionsUI.PANE_MAIN_MAIN_AREA_LIST_ROWSCROLLER:ShowSlider('auto')
     OptionsUI.PANE_MAIN_MAIN_AREA_LIST_ROWSCROLLER:UpdateSize()
-
-
-    
-
-    --OptionsUI.PANE_MAIN_MAIN_AREA_LIST_CHILD_  
-
-
-    -- Create layout for Second Pane
-    OptionsUI.PANE_SECOND_LAYOUT = Component.CreateWidget("PaneLayoutMain", OptionsUI.PANE_SECOND)
-
-
 end
 
-
--- Test button
+-- Button to create a new Pizza
 function AddPizzaButton(args)
     Debug.Table("AddPizzaButton", args)
     Debug.Log("Is args.widget widget? : ", tostring(Component.IsWidget(args.widget)))
     Debug.Log("This was button with name : ", args.widget:GetName())
 
-    -- feck the popups yo!
-    local pizza = _table.copy(c_Pizza_Base)
-    pizza.name = "Extra " .. tostring(g_ExtraPizzaIndex)
-    pizza.key = "extra" .. tostring(g_ExtraPizzaIndex)
-    g_ExtraPizzaIndex = g_ExtraPizzaIndex + 1
-    g_Pizzas[pizza.key] = pizza
+    -- Todo: Popup Prompt to decide Name (and possibly type)
+    local pizza = Pizza_CreateNew() -- Should include name
     pizza.barEntry = CreatePizzaBarEntry(pizza)
-    Pizza_UpdateAll()
+    Pizza_UpdateAll() -- Dunno
 end
 
+
+function SetupOptionsUIBarList()
+    -- Create bar entries
+    for pizzaKey, pizza in pairs(g_Pizzas) do
+        pizza.barEntry = CreatePizzaBarEntry(pizza)
+        Debug.Log("barEntry for " .. pizzaKey .. " has been created")
+    end
+end
 
 
 
@@ -142,8 +147,7 @@ end
 -- Drag and Drop
 -- ------------------------------------------
 
-
-
+-- No idea what this event function is for
 function OnDragDropEnd(args)
     if (args and args.canceled and args.dragdata and type(args.dragdata) == "string") then
         local dragdata = jsontotable(args.dragdata);
@@ -154,33 +158,7 @@ function OnDragDropEnd(args)
     end
 end
 
-
-
-
-
-function GetPizzaSegment(pizzaKey, segmentIndex)
-    --Debug.Table("GetPizzaSegment", {pizzaKey = pizzaKey, segmentIndex = segmentIndex})
-    local pizza = g_Pizzas[pizzaKey]
-    assert(pizza, "who ate my pizza D:")
-    --Debug.Table("pizza", pizza)
-    local segment = pizza.slots[segmentIndex]
-    --Debug.Table("GetPizzaSegment returnining segment", segment)
-    return segment
-end
-
-
-function GetDragInfoForPizzaSegment(pizzaKey, segmentIndex)
-    local slot = GetPizzaSegment(pizzaKey, segmentIndex)
-    assert(slot.slotType == "calldown", "dont know how to get drag info for this slot type (" .. tostring(slot.slotType) .. ")")
-    return tostring({pizza = pizzaKey, index = segmentIndex, itemSdbId = slot.itemTypeId, from = DRAG_ORIGIN_CU})
-end
-
-function PizzaSegmentEmpty(pizzaKey, segmentIndex)
-    --Debug.Table("PizzaSegmentEmpty", {pizzaKey = pizzaKey, segmentIndex = segmentIndex})
-    local segment = GetPizzaSegment(pizzaKey, segmentIndex)
-    return (segment.slotType == "empty")
-end
-
+-- Sets up the focusbox associated with the drop area of a pizza slot icon
 function SetupDropFocus(w, pizzaKey, segmentIndex)
     local dropFocus = w:GetChild("focus")
     dropFocus:BindEvent("OnMouseDown", function()
@@ -191,7 +169,8 @@ function SetupDropFocus(w, pizzaKey, segmentIndex)
     dropFocus:SetCursor("sys_hand");
 end
 
-
+-- Sets up the droptarget associated with the drop area of a pizza slot icon
+-- Also defines the handlers for the Drag and Drop events
 function SetupDropTarget(w, pizzaKey, segmentIndex)
     Debug.Log("SetupDropTarget")
 
@@ -253,32 +232,38 @@ function SetupDropTarget(w, pizzaKey, segmentIndex)
 end
 
 
+-- ------------------------------------------
+-- Slotting functions
+-- ------------------------------------------
 
---[[
-function GetDragInfoForSlot(index)
-    local dragData = {};
-    
-    dragData = GetDragDataForItemSlot(index);
-    
-    return dragData;
+-- Basic Getter for the information in a slot
+function GetPizzaSegment(pizzaKey, segmentIndex)
+    local pizza = g_Pizzas[pizzaKey]
+    assert(pizza, "who ate my pizza D:")
+    local segment = pizza.slots[segmentIndex]
+    return segment
 end
 
-
-function GetDragDataForItemSlot(index)
-    -- for dragging consumable slots we need the item sdbid, index, and if it's local (to swap rather than replace)
-    return tostring({index = index, itemSdbId = g_abilityInfo[index].itemInfo.itemTypeId, from = c_ActionbarDragOrigin});
+-- The correct method to check if a slot is "empty"
+function PizzaSegmentEmpty(pizzaKey, segmentIndex)
+    local segment = GetPizzaSegment(pizzaKey, segmentIndex)
+    return (segment.slotType == "empty")
 end
---]]
 
+-- Generates the text string to be provided to Component.BeginDragDrop with info on our Pizza Segment
+function GetDragInfoForPizzaSegment(pizzaKey, segmentIndex)
+    local slot = GetPizzaSegment(pizzaKey, segmentIndex)
+    assert(slot.slotType == "calldown", "dont know how to get drag info for this slot type (" .. tostring(slot.slotType) .. ")")
+    return tostring({pizza = pizzaKey, index = segmentIndex, itemSdbId = slot.itemTypeId, from = DRAG_ORIGIN_CU})
+end
 
+-- Logic function for moving the data of one slot to another (and, if the destination is occupied, moving that information to where we came from)
 function SwapPizzaSegment(fromPizza, fromSegment, toSegment, toPizza)
-
     Debug.Table("SwapPizzaSegment", {fromPizza = fromPizza, fromSegment = fromSegment, toSegment = toSegment, toPizza = toPizza})
 
     if (fromSegment and toSegment) then
         local item1 = GetPizzaSegment(fromPizza, fromSegment).itemTypeId
         local item2 = GetPizzaSegment(toPizza, toSegment).itemTypeId
-
 
         if not PizzaSegmentEmpty(fromPizza, fromSegment) and not PizzaSegmentEmpty(toPizza, toSegment) then
             Debug.Log("item1 and item2")
@@ -293,22 +278,18 @@ function SwapPizzaSegment(fromPizza, fromSegment, toSegment, toPizza)
             InsertPizzaSegment(fromPizza, item2, fromSegment)
             EatPizzaSegment(toPizza, toSegment)
         end
-
     end
 end
 
+-- Inserts data into a slot
 function InsertPizzaSegment(pizzaKey, itemTypeId, segmentIndex)
-    Debug.Log("InsertPizzaSegment")
+    -- Retrieve current data
+    local slotData = GetPizzaSegment(pizzaKey, segmentIndex)
 
-    -- Get segment
-    --local segment = GetPizzaSegment(pizzaKey, segmentIndex)
-    
-    -- Update pizzas data
-    local slotData = g_Pizzas[pizzaKey].slots[segmentIndex]
-    Debug.Table("pre update slotData", slotData)
-
+    -- Set the new itemTypeId
     slotData.itemTypeId = itemTypeId
     
+    -- Set the new slotType
     if tonumber(itemTypeId) == 0 then -- :s not sure about types here
         slotData.slotType = "empty"
     else
@@ -317,7 +298,6 @@ function InsertPizzaSegment(pizzaKey, itemTypeId, segmentIndex)
 
     -- Save
     g_Pizzas[pizzaKey].slots[segmentIndex] = slotData
-    Debug.Table("post update slotData", slotData)
 
     -- Trigger pizzas to be updated
     Pizza_UpdateAll({event="InsertPizzaSegment"})
@@ -326,11 +306,15 @@ function InsertPizzaSegment(pizzaKey, itemTypeId, segmentIndex)
     UpdatePizzaBarSlotIcon(pizzaKey, segmentIndex)
 end
 
+-- Remove data from a slot
 function EatPizzaSegment(pizzaKey, segmentIndex)
-    Debug.Log("EatPizzaSegment")
     InsertPizzaSegment(pizzaKey, 0, segmentIndex)
 end
 
+
+-- ------------------------------------------
+-- Widget functions
+-- ------------------------------------------
 
 function UpdatePizzaBarSlotIcon(pizzaKey, segmentIndex, slotIcon)
 
@@ -365,10 +349,6 @@ function UpdatePizzaBarSlotIcon(pizzaKey, segmentIndex, slotIcon)
         w_ICON:ClearIcon()
     end
 end
-
-
-
-
 
 
 -- New Options bar widget
@@ -589,13 +569,5 @@ function CreateAbilityIcon(slotIndex, pizzaIndex, PARENT)
 --]]
 
     return icon
-end
-
-function SetupOptionsUIBarList()
-    -- Create bar entries
-    for pizzaKey, pizza in pairs(g_Pizzas) do
-        pizza.barEntry = CreatePizzaBarEntry(pizza)
-        Debug.Log("barEntry for " .. pizzaKey .. " has been created")
-    end
 end
 

@@ -219,6 +219,31 @@ end
 -- Main Logic
 -- ------------------------------------------
 
+function Pizza_CreateNew(args)
+    Debug.Table("Pizza_CreateNew", args)
+
+    -- Copy the base table
+    local pizza = _table.copy(c_Pizza_Base)
+    
+    -- Use provided name and create key
+    if args and args.name then
+        pizza.name = name
+        pizza.key = name -- TODO: This is gonna need some proofing
+
+    -- Generate a name and key
+    else
+        pizza.name = "Extra " .. tostring(g_ExtraPizzaIndex)
+        pizza.key = "extra" .. tostring(g_ExtraPizzaIndex)
+        g_ExtraPizzaIndex = g_ExtraPizzaIndex + 1
+    end
+
+    -- Store this new and glorious Pizza
+    g_Pizzas[pizza.key] = pizza
+
+    -- Serve it to the lucky bastard who ordered it
+    return pizza
+end
+
 function Pizza_IsActive()
     return (g_CurrentlyActivePizza ~= nil)
 end
