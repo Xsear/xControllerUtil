@@ -48,7 +48,9 @@
         </Texture>
 
         <Texture name="eventsBG" src="components/MainUI/Panels/Dashboard/textures/eventsBG.png" premultiplied="false"/>
-    
+        
+        <Texture name="DaisyWheel_Petal" src="./textures/petal.png" premultiplied="false"/>
+
     </Textures>
 
     <Styles>
@@ -196,6 +198,16 @@
         </BluePrint>
 
 
+        <BluePrint name="DaisyWheel_Petal" instantiable="true">
+            <StillArt name="iconBackground" dimensions="width:100%; height:100%" style="texture:3dActionBar; region:circle; tint:2222dd; alpha:0.5"/>
+            <StillArt name="petalBackground" dimensions="width:100%; height:100%" style="texture:DaisyWheel_Petal; tint:2222dd; alpha:0"/>
+        </BluePrint>
+
+        <BluePrint name="DaisyWheel_Petal_Entry" instantiable="true">
+            <StillArt name="circleBackground" dimensions="width:100%; height:100%" style="texture:3dActionBar; region:circle; tint:2222dd; alpha:0.5"/>
+            <Text name="characterText" dimensions="dock:fill" style="font:UbuntuBold_12; valign:center; halign:center;clip: false; wrap:false; padding:0; visible:true; color:FFFFFF"/>
+        </BluePrint>
+
     </BluePrints>
 
     <Frames>
@@ -236,8 +248,10 @@
         
         <PanelFrame name="DaisyWheel" dimensions="center-y:50%; center-x:50%; width:50%; height:50%;" permanent="true" visible="true" depth="10">
             <Children>
-                
-                <Group id="DaisyContainer" dimensions="dock:fill"/> <!-- center-y:50%; center-x:50%; width:100%; height:100%; -->
+                <Group id="DaisyContainer" dimensions="dock:fill">
+                    <StillArt name="iconBackground" dimensions="width:105%; height:125%" style="texture:3dActionBar; region:circle; tint:000000; alpha:0.4"/>
+                    <!--<StillArt name="iconBackground" dimensions="width:100%; height:100%" style="texture:3dActionBar; region:circle; tint:2222dd; alpha:0.2"/>-->
+                </Group>
             </Children>
         </PanelFrame>
 

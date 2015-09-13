@@ -202,6 +202,13 @@ local alphabetTableIndex = {
 }
 
 
+local petalEntryTintIndex = {
+    [1] = "0000CC",
+    [2] = "CCCC00",
+    [3] = "CC0000",
+    [4] = "00CC00",
+}
+
 function DaisyWheel_UserKeybinds()
     g_KeySet_Daisy_DPAD = UserKeybinds.Create()
         g_KeySet_Daisy_DPAD:RegisterAction("daisy_dpad_left", DaisyDPADInput, "toggle")
@@ -247,37 +254,91 @@ function DaisyWheel_OnComponentLoad()
     local numberOfTables = 8
     local perTablePrecent = (100/numberOfTables)
 
+    local masterBounds = masterCont:GetBounds()
+    local masterCenterX = math.floor(masterBounds.width  / 2)
+    local masterCenterY = math.floor(masterBounds.height / 2)
+
+    local daisyRadius = math.floor(masterBounds.width  / 3)   --(RT_SEG_WIDTH*3)*0.30
+
+    local daisyOriginX = masterCenterX
+    local daisyOriginY = masterCenterY
+
+
+
+    Debug.Divider()
+    Debug.Log("DaisyWheel_OnComponentLoad!")
+
+    Debug.Table("bounds", masterCont:GetBounds())
+
+    Debug.Table("maths", {
+                    masterCenterX = masterCenterX,
+                    masterCenterY = masterCenterY,
+                    daisyRadius = daisyRadius,
+                    daisyOriginX = daisyOriginX,
+                    daisyOriginY = daisyOriginY,
+                })
+    Debug.Divider()
+
+
+    -- Create a Petal for each table of character
     for i=1,8 do -- #alphabetTable (but that wont work since pairs)
-        local tableAngle = 360 * (perTablePrecent*i)/100 - 135
-        local tablePoint = GetPointOnCricle(400, 200, (RT_SEG_WIDTH*3)*0.30, tableAngle)
 
+        -- Petal size and offset
+        local petalWidth = 160
+        local petalHeight = 160
+        local petalOriginXOffset = math.floor(petalWidth/2)
+        local petalOriginYOffset = math.floor(petalHeight/2)
 
-        local cont = Component.CreateWidget(unicode.format('<Group dimensions="width:160; height:160; left:%i; top:%i;"><StillArt name="Background" dimensions="dock:fill" style="texture:colors; region:white; tint:#00eebb; alpha:0.4;"/></Group>', tablePoint.x-20, tablePoint.y-20), masterCont)
+        -- Petal position in the Wheel
+        local tableAngleCorrection = -135 -- This is the value that puts the "a-b-c-d" group at the top, like I want it :)
+        local tableAngle = (360 * (perTablePrecent*i)/100) + tableAngleCorrection
+        local tablePoint = GetPointOnCricle(daisyOriginX, daisyOriginY, daisyRadius, tableAngle)
+
+        -- Petal container
+        local PETAL = Component.CreateWidget(unicode.format('<Group blueprint="DaisyWheel_Petal" dimensions="width:%i; height:%i; left:%i; top:%i;"/>', petalWidth, petalHeight, tablePoint.x-petalOriginXOffset, tablePoint.y-petalOriginYOffset), masterCont)
+        
+        -- Character table for this petal
         local characterTable = fullAlphabetTable["default"][alphabetTableIndex[i]]
 
-        local numberOfSegments = 4 -- # characters per segment
-        local perSegPrecent = (100/numberOfSegments)
+        local numberOfSegments = 4 -- # characters/segments per petal
+        local perSegmentPrecent = (100/numberOfSegments)
 
+        -- Some random initialization /shoga
         w_DaisyWheelCharacterWidgets[alphabetTableIndex[i]] = {}
 
         -- Inner Alphabet Character Segments
         for j=1,numberOfSegments do
-            local angle = 360 * (perSegPrecent*j)/100 + 90
-            local point = GetPointOnCricle(90, 80, (RT_SEG_WIDTH/2)*0.30, angle)
-            local SEGMENT = Component.CreateWidget(unicode.format('<Group blueprint="KeyPizzaSegment" dimensions="width:20; height:20; left:%i; top:%i;"></Group>', point.x-20, point.y-20), cont)
+
+            -- Character Entry size and offset
+            local entryWidth = 40;
+            local entryHeight = 40;
+            local entryOriginXOffset = math.floor(entryWidth/2)
+            local entryOriginYOffset = math.floor(entryHeight/2)
+
+            -- Character entry position in the "XYAB" pie
+            local segmentCircleRadius = entryWidth -- This is producing the results I want currently but I don't think it follows the train of calculation
+            local angleCorrection = 90
+            local angle = 360 * (perSegmentPrecent*j)/100 + angleCorrection
+            local point = GetPointOnCricle(petalOriginXOffset, petalOriginYOffset, segmentCircleRadius, angle)
+
+            -- Create character entry segment
+            local SEGMENT = Component.CreateWidget(unicode.format('<Group blueprint="DaisyWheel_Petal_Entry" dimensions="width:%i; height:%i; left:%i; top:%i;"></Group>', entryWidth, entryHeight, point.x - entryOriginXOffset, point.y - entryOriginYOffset), PETAL)
             
+            -- Fill in the character
             if (characterTable[j]) then
 
-                local inputIcon = InputIcon.CreateVisual(SEGMENT:GetChild("inputIconGroup"), "Bind")
-                local keyCode = fullAlphabetTableKeycodes["default"][alphabetTableIndex[i]][j]
-                inputIcon:SetBind({keycode=keyCode, alt=false}, true)
+                local characterText = SEGMENT:GetChild("characterText")
+                characterText:SetText(characterTable[j])
 
-                w_DaisyWheelCharacterWidgets[alphabetTableIndex[i]][j] = inputIcon
+                local circleBackground = SEGMENT:GetChild("circleBackground")
+                circleBackground:SetParam("tint", petalEntryTintIndex[j])
+                circleBackground:SetParam("alpha", 0.7)
 
+                w_DaisyWheelCharacterWidgets[alphabetTableIndex[i]][j] = {characterText=characterText, circleBackground=circleBackground}
             end
         end
 
-        w_DaisyWheelTableWidgets[alphabetTableIndex[i]] = cont
+        w_DaisyWheelTableWidgets[alphabetTableIndex[i]] = PETAL
 
     end
 
@@ -464,9 +525,20 @@ function UpdateDaisyWidgetVisibility()
     end
 
     for key, widgets in pairs(w_DaisyWheelCharacterWidgets) do
-        for i, inputIcon in ipairs(widgets) do
-            local keyCode = fullAlphabetTableKeycodes[g_DaisyState.mode][key][i]
-            inputIcon:SetBind({keycode=keyCode, alt=false}, true)
+        for i, segmentWidgets in ipairs(widgets) do
+
+
+            if key == g_DaisyState.direction then
+                segmentWidgets.circleBackground:SetParam("tint", petalEntryTintIndex[i])
+                segmentWidgets.circleBackground:SetParam("alpha", 0.7)
+            else
+                segmentWidgets.circleBackground:SetParam("alpha", 0)
+            end
+
+           
+
+            local character = fullAlphabetTable[g_DaisyState.mode][key][i]
+            segmentWidgets.characterText:SetText(character)
         end
     end
 end
