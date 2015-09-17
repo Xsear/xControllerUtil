@@ -32,7 +32,6 @@ w_DaisyDPADTextWidgets = {}
 
 local CB2_DaisyBackspace = nil
 
-
 local FRAME = Component.GetFrame("DaisyWheel")
 FRAME:Show(false)
 local DAISY_CONTAINER = Component.GetWidget("DaisyContainer")
@@ -245,6 +244,40 @@ function DaisyWheel_OnComponentLoad()
     -- Setup keybinds
     DaisyWheel_UserKeybinds()
 
+    -- Setup daisy wheel
+    BuildDaisyWheel()
+
+    -- Create navwheel node
+    local NAVWHEEL_NODE = NavWheel.CreateNode()
+    NAVWHEEL_NODE:GetIcon():SetTexture("icons", "rotate");
+    NAVWHEEL_NODE:SetTitle("Daisy Wheel")   
+    NAVWHEEL_NODE:SetAction(function()
+                                NavWheel.Close()
+                                DaisyWheel_Activate()
+                            end)
+    NAVWHEEL_NODE:SetParent("hud_root")
+
+    -- Create input box
+    SetupChatInput()
+
+    -- Create "Backspace hold" Callback2 instance
+    CB2_DaisyBackspace = Callback2.Create()
+    CB2_DaisyBackspace:Bind(ChatInput_DoBackspace, {callback=true})
+
+end
+
+
+function OnSlashDaisy(args)
+    Debug.Log("OnSlashDaisy")
+    if DaisyWheel_IsActive() then
+        DaisyWheel_Deactivate()
+    else
+        DaisyWheel_Activate()
+    end
+end
+
+
+function BuildDaisyWheel(args)
     -- Setup widgets
     w_DaisyWheelTableWidgets = {}
     w_DaisyWheelCharacterWidgets = {}
@@ -263,10 +296,8 @@ function DaisyWheel_OnComponentLoad()
     local daisyOriginX = masterCenterX
     local daisyOriginY = masterCenterY
 
-
-
     Debug.Divider()
-    Debug.Log("DaisyWheel_OnComponentLoad!")
+    Debug.Log("BuildDaisyWheel")
 
     Debug.Table("bounds", masterCont:GetBounds())
 
@@ -281,7 +312,7 @@ function DaisyWheel_OnComponentLoad()
 
 
     -- Create a Petal for each table of character
-    for i=1,8 do -- #alphabetTable (but that wont work since pairs)
+    for i=1,numberOfTables do
 
         -- Petal size and offset
         local petalWidth = 160
@@ -341,36 +372,8 @@ function DaisyWheel_OnComponentLoad()
         w_DaisyWheelTableWidgets[alphabetTableIndex[i]] = PETAL
 
     end
-
-    -- Create navwheel node
-    local NAVWHEEL_NODE = NavWheel.CreateNode()
-    NAVWHEEL_NODE:GetIcon():SetTexture("icons", "rotate");
-    NAVWHEEL_NODE:SetTitle("Daisy Wheel")   
-    NAVWHEEL_NODE:SetAction(function()
-                                NavWheel.Close()
-                                DaisyWheel_Activate()
-                            end)
-    NAVWHEEL_NODE:SetParent("hud_root")
-
-    -- Create input box
-    SetupChatInput()
-
-
-    -- Backspace Callback2 instance
-    CB2_DaisyBackspace = Callback2.Create()
-    CB2_DaisyBackspace:Bind(ChatInput_DoBackspace, {callback=true})
-
 end
 
-
-function OnSlashDaisy(args)
-    Debug.Log("OnSlashDaisy")
-    if DaisyWheel_IsActive() then
-        DaisyWheel_Deactivate()
-    else
-        DaisyWheel_Activate()
-    end
-end
 
 function DaisyWheel_IsActive()
     return g_DaisyState.active
