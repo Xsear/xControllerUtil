@@ -11,6 +11,7 @@ require "table"
 
 -- Firefall
 require "lib/lib_Debug"
+Debug.EnableLogging(true)
 require "lib/lib_Items"
 require "lib/lib_Slash"
 require "lib/lib_ChatLib"
@@ -28,6 +29,7 @@ require "lib/lib_InputIcon"
 require "./util/optionsPopupWindow"
 
 -- Addon
+require "./InterfaceOptions"
 require "./Pizza"
 require "./OptionsUI"
 require './DaisyWheel'
@@ -100,10 +102,11 @@ SUPER_CALLDOWN_PIZZA_KEYBINDINGS = {
 -- ------------------------------------------
 -- GLOBALS
 -- ------------------------------------------
+-- Are Options Loaded?
+g_OptionsLoaded = false
 
 -- SIN Notification Timestamp
 g_NotificationsSINTriggerTimestamp = nil
-
 
 
 
@@ -123,6 +126,9 @@ function OnComponentLoad(args)
     -- Debug
     Debug.EnableLogging(true)
 
+    -- Interface Options
+    InterfaceOptions_OnComponentLoad()
+
     -- Pizza
     Pizza_OnComponentLoad()
 
@@ -135,6 +141,10 @@ function OnComponentLoad(args)
     -- Slash
     LIB_SLASH.BindCallback({slash_list="xcontrollerutil,xconutil,xcu,cu", description="Controller Utilities", func=OnSlashGeneral})
     LIB_SLASH.BindCallback({slash_list="redetect,gamepad", description="Attempt to detect active gamepad", func=OnSlashGamepad})
+end
+
+function OnOptionsLoaded(args)
+    g_OptionsLoaded = true
 end
 
 

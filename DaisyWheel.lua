@@ -40,6 +40,61 @@ local DAISY_INPUT_CHANNEL = nil
 local DAISY_INPUT = nil
 
 
+
+g_Options["Daisy"] = {}
+local DaisyOptions = g_Options["Daisy"]
+
+DaisyOptions["Alphabet"] = {
+    ["default"] = {
+            ["up"]         = {"a", "b", "c", "d"},
+            ["right-up"]   = {"e", "f", "g", "h"},
+            ["right"]      = {"i", "j", "k", "l"},
+            ["right-down"] = {"m", "n", "o", "p"},
+            ["down"]       = {"q", "r", "s", "t"},
+            ["left-down"]  = {"u", "v", "w", "x"},
+            ["left"]       = {"y", "z", ",", "."},
+            ["left-up"]    = {":", "/", "@", "-"},
+    },
+    ["caps"] = {
+            ["up"]         = {"A", "B", "C", "D"},
+            ["right-up"]   = {"E", "F", "G", "H"},
+            ["right"]      = {"I", "J", "K", "L"},
+            ["right-down"] = {"M", "N", "O", "P"},
+            ["down"]       = {"Q", "R", "S", "T"},
+            ["left-down"]  = {"U", "V", "W", "X"},
+            ["left"]       = {"Y", "Z", "?", "!"},
+            ["left-up"]    = {";", "\\", "&", "_"},
+    },
+    ["numbers"] = {
+            ["up"]         = {"1", "2", "3", "4"},
+            ["right-up"]   = {"5", "6", "7", "8"},
+            ["right"]      = {"9", "0", "*", "+"},
+            ["right-down"] = {"£", "€", "$", "’"},
+            ["down"]       = {"'", "\"", "~", "|"},
+            ["left-down"]  = {"=", "#", "%", "^"},
+            ["left"]       = {"<", ">", "[", "]"},
+            ["left-up"]    = {"{", "}", "(", ")"},
+    },
+    ["special"] = {
+            ["up"]         = {":D", ":(", ":)", "®"},
+            ["right-up"]   = {"™", "©", "G", ":Ð"},
+            ["right"]      = {":'D", "", "", ""},
+            ["right-down"] = {"", "", "", ""},
+            ["down"]       = {"", "", "", ""},
+            ["left-down"]  = {"", "", "", ""},
+            ["left"]       = {"", "", "", ""},
+            ["left-up"]    = {"", "", "", ""},
+    },
+}
+DaisyOptions["Sizes"] = {}
+DaisyOptions.Sizes.WheelScale = 1
+DaisyOptions.Sizes.PetalWidth = 160
+DaisyOptions.Sizes.PetalHeight = 160
+DaisyOptions.Sizes.EntryWidth = 40
+DaisyOptions.Sizes.EntryHeight = 40
+
+
+
 C_ChatlineMaxCharLength = 255
 local c_ChannelPadding = 5
 
@@ -218,7 +273,18 @@ function DaisyWheel_UserKeybinds()
         g_KeySet_Daisy_DPAD:BindKey("daisy_dpad_right", KEYCODE_GAMEPAD_DPAD_RIGHT)
         g_KeySet_Daisy_DPAD:RegisterAction("daisy_dpad_down", DaisyDPADInput, "toggle")
         g_KeySet_Daisy_DPAD:BindKey("daisy_dpad_down", KEYCODE_GAMEPAD_DPAD_DOWN)
+
+        if false or g_Debug then
+            -- Keyboard arrow keys
+            g_KeySet_Daisy_DPAD:BindKey("daisy_dpad_left", 37)
+            g_KeySet_Daisy_DPAD:BindKey("daisy_dpad_up", 38)
+            g_KeySet_Daisy_DPAD:BindKey("daisy_dpad_right", 39)
+            g_KeySet_Daisy_DPAD:BindKey("daisy_dpad_down", 40)
+        end
+
         g_KeySet_Daisy_DPAD:Activate(false)
+
+
 
     g_KeySet_Daisy_XYAB = UserKeybinds.Create()
         g_KeySet_Daisy_XYAB:RegisterAction("daisy_xyab", DaisyXYABInput)
@@ -236,6 +302,22 @@ function DaisyWheel_UserKeybinds()
         g_KeySet_Daisy_XYAB:BindKey("daisy_caps", KEYCODE_GAMEPAD_LEFT_TRIGGER)
         g_KeySet_Daisy_XYAB:BindKey("daisy_numbers", KEYCODE_GAMEPAD_RIGHT_TRIGGER)
         g_KeySet_Daisy_XYAB:Activate(false)
+
+    g_KeySet_Daisy_ThumbStickTest = UserKeybinds.Create()
+        g_KeySet_Daisy_ThumbStickTest:RegisterAction("left_thumb", ThumbstickTest, "toggle")
+        g_KeySet_Daisy_ThumbStickTest:RegisterAction("right_thumb", ThumbstickTest, "toggle")
+        g_KeySet_Daisy_ThumbStickTest:BindKey("left_thumb", KEYCODE_GAMEPAD_LEFT_THUMBSTICK, "toggle")
+        g_KeySet_Daisy_ThumbStickTest:BindKey("right_thumb", KEYCODE_GAMEPAD_RIGHT_THUMBSTICK, "toggle")
+
+
+end
+
+function ThumbstickTest(args)
+
+    args.event = "ThumbstickTest " .. args.name
+
+    Debug.Event(args)
+
 end
 
 
@@ -279,10 +361,33 @@ end
 
 function BuildDaisyWheel(args)
     -- Setup widgets
+
+    if w_DaisyWheelPetalWidgets then
+        for index, value in ipairs(w_DaisyWheelPetalWidgets) do
+            if Component.IsWidget(value) then
+                Component.RemoveWidget(value)
+            end
+        end
+    end
+
+    w_DaisyWheelPetalWidgets = {}
     w_DaisyWheelTableWidgets = {}
     w_DaisyWheelCharacterWidgets = {}
 
     local masterCont = DAISY_CONTAINER
+    if DAISY_CONTAINER:GetChildCount() > 1 then
+        for idx = 2,DAISY_CONTAINER:GetChildCount() do
+            local child = DAISY_CONTAINER:GetChild(idx)
+            if Component.IsWidget(child) then
+                Component.RemoveWidget(child)
+            end
+        end
+    end
+
+    Debug.Warn("The Daisy Wheel Scale is " .. tostring(DaisyOptions.Sizes.WheelScale))
+
+    FRAME:SetParam("scalex", DaisyOptions.Sizes.WheelScale)
+    FRAME:SetParam("scaley", DaisyOptions.Sizes.WheelScale)
 
     local numberOfTables = 8
     local perTablePrecent = (100/numberOfTables)
@@ -315,8 +420,8 @@ function BuildDaisyWheel(args)
     for i=1,numberOfTables do
 
         -- Petal size and offset
-        local petalWidth = 160
-        local petalHeight = 160
+        local petalWidth = DaisyOptions.Sizes.PetalWidth
+        local petalHeight = DaisyOptions.Sizes.PetalHeight
         local petalOriginXOffset = math.floor(petalWidth/2)
         local petalOriginYOffset = math.floor(petalHeight/2)
 
@@ -327,7 +432,9 @@ function BuildDaisyWheel(args)
 
         -- Petal container
         local PETAL = Component.CreateWidget(unicode.format('<Group blueprint="DaisyWheel_Petal" dimensions="width:%i; height:%i; left:%i; top:%i;"/>', petalWidth, petalHeight, tablePoint.x-petalOriginXOffset, tablePoint.y-petalOriginYOffset), masterCont)
-        
+            
+        w_DaisyWheelPetalWidgets[#w_DaisyWheelPetalWidgets + 1] = PETAL
+
         -- Character table for this petal
         local characterTable = fullAlphabetTable["default"][alphabetTableIndex[i]]
 
@@ -341,8 +448,8 @@ function BuildDaisyWheel(args)
         for j=1,numberOfSegments do
 
             -- Character Entry size and offset
-            local entryWidth = 40;
-            local entryHeight = 40;
+            local entryWidth = DaisyOptions.Sizes.EntryWidth
+            local entryHeight = DaisyOptions.Sizes.EntryHeight
             local entryOriginXOffset = math.floor(entryWidth/2)
             local entryOriginYOffset = math.floor(entryHeight/2)
 
