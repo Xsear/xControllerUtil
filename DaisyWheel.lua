@@ -7,96 +7,11 @@
 require 'lib/lib_NavWheel'
 require 'lib/lib_ContextWheel'
 
-g_Aimpad = true
-
-g_KeySet_Daisy_DPAD = nil
-g_KeySet_Daisy_XYAB = nil
-g_DaisyState = {
-    active = false,
-    mode = "default",
-    modifiers = {
-        caps = false,
-        numbers = false
-    },
-    dpad = {
-        left = false,
-        up = false,
-        right = false,
-        down = false,
-    },
-}
-g_DaisyOverridenKeybinds = {}
-g_DaisyPausedOppositeAxis = false
-g_DaisyPreviouslyTyped = ""
-
-w_DaisyWheelTableWidgets = {}
-w_DaisyDPADTextWidgets = {}
-
-local CB2_DaisyBackspace = nil
-
-local FRAME = Component.GetFrame("DaisyWheel")
-FRAME:Show(false)
-local DAISY_CONTAINER = Component.GetWidget("DaisyContainer")
-local DAISY_INPUT_CONTAINER = nil
-local DAISY_INPUT_CHANNEL = nil
-local DAISY_INPUT = nil
 
 
 
-g_Options["Daisy"] = {}
-local DaisyOptions = g_Options["Daisy"]
-
-DaisyOptions["Alphabet"] = {
-    ["default"] = {
-            ["up"]         = {"a", "b", "c", "d"},
-            ["right-up"]   = {"e", "f", "g", "h"},
-            ["right"]      = {"i", "j", "k", "l"},
-            ["right-down"] = {"m", "n", "o", "p"},
-            ["down"]       = {"q", "r", "s", "t"},
-            ["left-down"]  = {"u", "v", "w", "x"},
-            ["left"]       = {"y", "z", ",", "."},
-            ["left-up"]    = {":", "/", "@", "-"},
-    },
-    ["caps"] = {
-            ["up"]         = {"A", "B", "C", "D"},
-            ["right-up"]   = {"E", "F", "G", "H"},
-            ["right"]      = {"I", "J", "K", "L"},
-            ["right-down"] = {"M", "N", "O", "P"},
-            ["down"]       = {"Q", "R", "S", "T"},
-            ["left-down"]  = {"U", "V", "W", "X"},
-            ["left"]       = {"Y", "Z", "?", "!"},
-            ["left-up"]    = {";", "\\", "&", "_"},
-    },
-    ["numbers"] = {
-            ["up"]         = {"1", "2", "3", "4"},
-            ["right-up"]   = {"5", "6", "7", "8"},
-            ["right"]      = {"9", "0", "*", "+"},
-            ["right-down"] = {"£", "€", "$", "’"},
-            ["down"]       = {"'", "\"", "~", "|"},
-            ["left-down"]  = {"=", "#", "%", "^"},
-            ["left"]       = {"<", ">", "[", "]"},
-            ["left-up"]    = {"{", "}", "(", ")"},
-    },
-    ["special"] = {
-            ["up"]         = {":D", ":(", ":)", "®"},
-            ["right-up"]   = {"™", "©", "G", ":Ð"},
-            ["right"]      = {":'D", "", "", ""},
-            ["right-down"] = {"", "", "", ""},
-            ["down"]       = {"", "", "", ""},
-            ["left-down"]  = {"", "", "", ""},
-            ["left"]       = {"", "", "", ""},
-            ["left-up"]    = {"", "", "", ""},
-    },
-}
-DaisyOptions["Sizes"] = {}
-DaisyOptions.Sizes.WheelScale = 1
-DaisyOptions.Sizes.PetalWidth = 160
-DaisyOptions.Sizes.PetalHeight = 160
-DaisyOptions.Sizes.EntryWidth = 40
-DaisyOptions.Sizes.EntryHeight = 40
-
-
-
+-- chat input stuff
+----------------------
 C_ChatlineMaxCharLength = 255
 local c_ChannelPadding = 5
 
@@ -122,7 +37,138 @@ local bp_InputBoxGroup =
             </Events>
         </DropTarget>
     </Group>]]
+----------------------
 
+CVAR_GAMEPAD_SENSITIVITY_POW = "aim.sensitivity_pow_gamepad"
+CVAR_GAMEPAD_SENSITIVITY_VERTMUL = "aim.sensitivity_vertmul_gamepad"
+
+
+DaisyConstants = {}
+DaisyConstants["DirectionMethod"] = {}
+DaisyConstants.DirectionMethod.DPAD = "dpad"
+DaisyConstants.DirectionMethod.Thumbstick = "thumbstick"
+DaisyConstants.DirectionMethod.Either = "both"
+
+DaisyConstants["Direction"] = {}
+DaisyConstants.Direction.Up = "up"
+DaisyConstants.Direction.RightUp = "right-up"
+DaisyConstants.Direction.Right = "right"
+DaisyConstants.Direction.RightDown = "right-down"
+DaisyConstants.Direction.Down = "down"
+DaisyConstants.Direction.LeftDown = "left-down"
+DaisyConstants.Direction.Left = "left"
+DaisyConstants.Direction.LeftUp = "left-up"
+
+DaisyConstants["AlphabetMode"] = {}
+DaisyConstants.AlphabetMode.Default = "default"
+DaisyConstants.AlphabetMode.Caps = "caps"
+DaisyConstants.AlphabetMode.Numbers = "numbers"
+DaisyConstants.AlphabetMode.Special = "special"
+
+g_Options["Daisy"] = {}
+local DaisyOptions = g_Options["Daisy"]
+
+DaisyOptions["Alphabet"] = {
+    [DaisyConstants.AlphabetMode.Default] = {
+        [DaisyConstants.Direction.Up]         = {"a", "b", "c", "d"},
+        [DaisyConstants.Direction.RightUp]    = {"e", "f", "g", "h"},
+        [DaisyConstants.Direction.Right]      = {"i", "j", "k", "l"},
+        [DaisyConstants.Direction.RightDown]  = {"m", "n", "o", "p"},
+        [DaisyConstants.Direction.Down]       = {"q", "r", "s", "t"},
+        [DaisyConstants.Direction.LeftDown]   = {"u", "v", "w", "x"},
+        [DaisyConstants.Direction.Left]       = {"y", "z", ",", "."},
+        [DaisyConstants.Direction.LeftUp]     = {":", "/", "@", "-"},
+    },
+    [DaisyConstants.AlphabetMode.Caps] = {
+        [DaisyConstants.Direction.Up]         = {"A", "B", "C", "D"},
+        [DaisyConstants.Direction.RightUp]    = {"E", "F", "G", "H"},
+        [DaisyConstants.Direction.Right]      = {"I", "J", "K", "L"},
+        [DaisyConstants.Direction.RightDown]  = {"M", "N", "O", "P"},
+        [DaisyConstants.Direction.Down]       = {"Q", "R", "S", "T"},
+        [DaisyConstants.Direction.LeftDown]   = {"U", "V", "W", "X"},
+        [DaisyConstants.Direction.Left]       = {"Y", "Z", "?", "!"},
+        [DaisyConstants.Direction.LeftUp]     = {";", "\\", "&", "_"},
+    },
+    [DaisyConstants.AlphabetMode.Numbers] = {
+        [DaisyConstants.Direction.Up]         = {"1", "2", "3", "4"},
+        [DaisyConstants.Direction.RightUp]    = {"5", "6", "7", "8"},
+        [DaisyConstants.Direction.Right]      = {"9", "0", "*", "+"},
+        [DaisyConstants.Direction.RightDown]  = {"£", "€", "$", "’"},
+        [DaisyConstants.Direction.Down]       = {"'", "\"", "~", "|"},
+        [DaisyConstants.Direction.LeftDown]   = {"=", "#", "%", "^"},
+        [DaisyConstants.Direction.Left]       = {"<", ">", "[", "]"},
+        [DaisyConstants.Direction.LeftUp]     = {"{", "}", "(", ")"},
+    },
+    [DaisyConstants.AlphabetMode.Special] = {
+        [DaisyConstants.Direction.Up]         = {":D", ":(", ":)", "®"},
+        [DaisyConstants.Direction.RightUp]    = {"™", "©", "G", ":Ð"},
+        [DaisyConstants.Direction.Right]      = {":'D", "", "", ""},
+        [DaisyConstants.Direction.RightDown]  = {"", "", "", ""},
+        [DaisyConstants.Direction.Down]       = {"", "", "", ""},
+        [DaisyConstants.Direction.LeftDown]   = {"", "", "", ""},
+        [DaisyConstants.Direction.Left]       = {"", "", "", ""},
+        [DaisyConstants.Direction.LeftUp]     = {"", "", "", ""},
+    },
+}
+DaisyOptions["Sizes"] = {}
+DaisyOptions.Sizes.WheelScale = 1
+DaisyOptions.Sizes.PetalWidth = 160
+DaisyOptions.Sizes.PetalHeight = 160
+DaisyOptions.Sizes.EntryWidth = 40
+DaisyOptions.Sizes.EntryHeight = 40
+
+DaisyOptions["Config"] = {}
+DaisyOptions.Config.DirectionMethod = DaisyConstants.DirectionMethod.Thumbstick
+DaisyOptions.Config.SwapThumbsticks = true
+DaisyOptions.Config.ThumbstickMovementPreventionHack = false
+DaisyOptions.Config.ThumbstickCoordinateTolerance = 2
+
+
+g_KeySet_Daisy_DPAD = nil
+g_KeySet_Daisy_XYAB = nil
+g_DaisyState = {
+    active = false,
+    mode = DaisyConstants.AlphabetMode.Default,
+    modifiers = {
+        caps = false,
+        numbers = false
+    },
+    dpad = {
+        left = false,
+        up = false,
+        right = false,
+        down = false,
+    },
+    thumbstick = {
+        initialCoordinates = nil,
+        previousCoordinates = nil,
+        horizontal = nil,
+        vertical = nil,
+        originalCvars = {
+        },
+    },
+}
+g_DaisyOverridenKeybinds = {}
+g_DaisyPausedOppositeAxis = false
+
+w_DaisyWheelTableWidgets = {}
+w_DaisyDPADTextWidgets = {}
+
+local CB2_DaisyBackspace = nil
+local CB2_DaisyThumbstickUpdate = nil
+
+local FRAME = Component.GetFrame("DaisyWheel")
+FRAME:Show(false)
+local DAISY_CONTAINER = Component.GetWidget("DaisyContainer")
+local DAISY_INPUT_CONTAINER = nil
+local DAISY_INPUT_CHANNEL = nil
+local DAISY_INPUT = nil
+
+FRAME_FullscreenCover = Component.GetFrame("FullscreenCover")
+FRAME_FullscreenCover:Show(false)
+local SHINE_RAYS      = Component.GetWidget("Rays");
+local SHINE_ANIMATION_1 = Component.GetWidget("shine1");
+local SHINE_ANIMATION_2 = Component.GetWidget("shine2");
 
 local CB2_DaisyDPADInput = {
     ["horizontal"] = nil,
@@ -130,17 +176,17 @@ local CB2_DaisyDPADInput = {
 }
 
 local daisyActionToKey = {
-    ["daisy_dpad_left"] = "left",
-    ["daisy_dpad_up"] = "up",
-    ["daisy_dpad_right"] = "right",
-    ["daisy_dpad_down"] = "down",
+    ["daisy_dpad_left"] = DaisyConstants.Direction.Left,
+    ["daisy_dpad_up"] = DaisyConstants.Direction.Up,
+    ["daisy_dpad_right"] = DaisyConstants.Direction.Right,
+    ["daisy_dpad_down"] = DaisyConstants.Direction.Down,
 }
 
 local daisyKeyToAxis = {
-    ["up"] = "vertical",
-    ["down"] = "vertical",
-    ["right"] = "horizontal",
-    ["left"] = "horizontal",
+    [DaisyConstants.Direction.Up] = "vertical",
+    [DaisyConstants.Direction.Down] = "vertical",
+    [DaisyConstants.Direction.Right] = "horizontal",
+    [DaisyConstants.Direction.Left] = "horizontal",
 }
 
 local daisyGetOppositeAxis = {
@@ -148,58 +194,15 @@ local daisyGetOppositeAxis = {
     ["horizontal"] = "vertical"
 }
 
-local alphabetTable = {
-    ["default"] = {
-            ["up"]         = {"a", "b", "c", "d"},
-            ["right-up"]   = {"e", "f", "g", "h"},
-            ["right"]      = {"i", "j", "k", "l"},
-            ["right-down"] = {"m", "n", "o", "p"},
-            ["down"]       = {"q", "r", "s", "t"},
-            ["left-down"]  = {"u", "v", "w", "x"},
-            ["left"]       = {"y", "z", ",", "."},
-            ["left-up"]    = {":", "/", "@", "-"},
-    },
-    ["caps"] = {
-            ["up"]         = {"A", "B", "C", "D"},
-            ["right-up"]   = {"E", "F", "G", "H"},
-            ["right"]      = {"I", "J", "K", "L"},
-            ["right-down"] = {"M", "N", "O", "P"},
-            ["down"]       = {"Q", "R", "S", "T"},
-            ["left-down"]  = {"U", "V", "W", "X"},
-            ["left"]       = {"Y", "Z", "?", "!"},
-            ["left-up"]    = {";", "\\", "&", "_"},
-    },
-    ["numbers"] = {
-            ["up"]         = {"1", "2", "3", "4"},
-            ["right-up"]   = {"5", "6", "7", "8"},
-            ["right"]      = {"9", "0", "*", "+"},
-            ["right-down"] = {"£", "€", "$", "’"},
-            ["down"]       = {"'", "\"", "~", "|"},
-            ["left-down"]  = {"=", "#", "%", "^"},
-            ["left"]       = {"<", ">", "[", "]"},
-            ["left-up"]    = {"{", "}", "(", ")"},
-    },
-    ["special"] = {
-            ["up"]         = {":D", ":(", ":)", "®"},
-            ["right-up"]   = {"™", "©", "G", ":Ð"},
-            ["right"]      = {":'D", "", "", ""},
-            ["right-down"] = {"", "", "", ""},
-            ["down"]       = {"", "", "", ""},
-            ["left-down"]  = {"", "", "", ""},
-            ["left"]       = {"", "", "", ""},
-            ["left-up"]    = {"", "", "", ""},
-    },
-}
-
 local alphabetTableIndex = {
-    [1] = "up",
-    [2] = "right-up",
-    [3] = "right",
-    [4] = "right-down",
-    [5] = "down",
-    [6] = "left-down",
-    [7] = "left",
-    [8] = "left-up",
+    [1] = DaisyConstants.Direction.Up,
+    [2] = DaisyConstants.Direction.RightUp,
+    [3] = DaisyConstants.Direction.Right,
+    [4] = DaisyConstants.Direction.RightDown,
+    [5] = DaisyConstants.Direction.Down,
+    [6] = DaisyConstants.Direction.LeftDown,
+    [7] = DaisyConstants.Direction.Left,
+    [8] = DaisyConstants.Direction.LeftUp,
 }
 
 
@@ -211,6 +214,7 @@ local petalEntryTintIndex = {
 }
 
 function DaisyWheel_UserKeybinds()
+    -- The keyset that handles DPAD button presses
     g_KeySet_Daisy_DPAD = UserKeybinds.Create()
         g_KeySet_Daisy_DPAD:RegisterAction("daisy_dpad_left", DaisyDPADInput, "toggle")
         g_KeySet_Daisy_DPAD:BindKey("daisy_dpad_left", KEYCODE_GAMEPAD_DPAD_LEFT)
@@ -221,6 +225,7 @@ function DaisyWheel_UserKeybinds()
         g_KeySet_Daisy_DPAD:RegisterAction("daisy_dpad_down", DaisyDPADInput, "toggle")
         g_KeySet_Daisy_DPAD:BindKey("daisy_dpad_down", KEYCODE_GAMEPAD_DPAD_DOWN)
 
+        --[[
         if false or g_Debug then
             -- Keyboard arrow keys
             g_KeySet_Daisy_DPAD:BindKey("daisy_dpad_left", 37)
@@ -228,11 +233,11 @@ function DaisyWheel_UserKeybinds()
             g_KeySet_Daisy_DPAD:BindKey("daisy_dpad_right", 39)
             g_KeySet_Daisy_DPAD:BindKey("daisy_dpad_down", 40)
         end
+        --]]
 
         g_KeySet_Daisy_DPAD:Activate(false)
 
-
-
+    -- The keyset that handles XYAB button presses as well as other general actions (ugh)
     g_KeySet_Daisy_XYAB = UserKeybinds.Create()
         g_KeySet_Daisy_XYAB:RegisterAction("daisy_xyab", DaisyXYABInput)
         g_KeySet_Daisy_XYAB:RegisterAction("daisy_space", DaisyXYABInput)
@@ -250,6 +255,7 @@ function DaisyWheel_UserKeybinds()
         g_KeySet_Daisy_XYAB:BindKey("daisy_numbers", KEYCODE_GAMEPAD_RIGHT_TRIGGER)
         g_KeySet_Daisy_XYAB:Activate(false)
 
+    -- A keyset that handles thumbstick presses, could be useful.
     g_KeySet_Daisy_ThumbStickTest = UserKeybinds.Create()
         g_KeySet_Daisy_ThumbStickTest:RegisterAction("left_thumb", ThumbstickTest, "toggle")
         g_KeySet_Daisy_ThumbStickTest:RegisterAction("right_thumb", ThumbstickTest, "toggle")
@@ -258,15 +264,6 @@ function DaisyWheel_UserKeybinds()
 
 
 end
-
-function ThumbstickTest(args)
-
-    args.event = "ThumbstickTest " .. args.name
-
-    Debug.Event(args)
-
-end
-
 
 function DaisyWheel_OnComponentLoad()
 
@@ -308,7 +305,6 @@ end
 
 function BuildDaisyWheel(args)
     -- Setup widgets
-
     if w_DaisyWheelPetalWidgets then
         for index, value in ipairs(w_DaisyWheelPetalWidgets) do
             if Component.IsWidget(value) then
@@ -331,7 +327,7 @@ function BuildDaisyWheel(args)
         end
     end
 
-    Debug.Warn("The Daisy Wheel Scale is " .. tostring(DaisyOptions.Sizes.WheelScale))
+    Debug.Log("The Daisy Wheel Scale is " .. tostring(DaisyOptions.Sizes.WheelScale))
 
     FRAME:SetParam("scalex", DaisyOptions.Sizes.WheelScale)
     FRAME:SetParam("scaley", DaisyOptions.Sizes.WheelScale)
@@ -383,7 +379,7 @@ function BuildDaisyWheel(args)
         w_DaisyWheelPetalWidgets[#w_DaisyWheelPetalWidgets + 1] = PETAL
 
         -- Character table for this petal
-        local characterTable = alphabetTable["default"][alphabetTableIndex[i]]
+        local characterTable = DaisyOptions["Alphabet"][DaisyConstants.AlphabetMode.Default][alphabetTableIndex[i]]
 
         local numberOfSegments = 4 -- # characters/segments per petal
         local perSegmentPrecent = (100/numberOfSegments)
@@ -428,7 +424,6 @@ function BuildDaisyWheel(args)
     end
 end
 
-
 function DaisyWheel_IsActive()
     return g_DaisyState.active
 end
@@ -436,13 +431,14 @@ end
 function DaisyWheel_Activate()
     Debug.Log("DaisyWheel_Activate")
     if not g_DaisyState.active then
+
+        -- Prepare chat input
         ChatInput_OnBeginChat({text=""})
 
-        -- Ensure cursor mode so that Chat displays
+        -- Ensure cursor mode, prevents movement, etc.
         Component.SetInputMode("cursor")
-        if not g_Aimpad then Component.SetInputMode("cursor") Debug.Log("Cursor mode engaged") end
+        Debug.Log("Cursor mode engaged")
         
-
         -- Start Daisy State Cycle
         CB2_DaisyStateCycle = Callback2.CreateCycle(DaisyStateCycle)
         CB2_DaisyStateCycle:Run(0.25)
@@ -467,8 +463,11 @@ function DaisyWheel_Activate()
             Debug.Log("Submit bound")
         --]]
 
-        -- Activate Aimpad mode
-        ToggleAimpadMode(true)
+        -- Activate thumbstick mode
+        if     DaisyOptions.Config.DirectionMethod == DaisyConstants.DirectionMethod.Thumbstick
+            or DaisyOptions.Config.DirectionMethod == DaisyConstants.DirectionMethod.Either then
+            ToggleThumbstickMode(true)
+        end
 
         -- Display Daisy Wheel
         FRAME:Show(true)
@@ -479,6 +478,7 @@ function DaisyWheel_Activate()
         -- Close on submit
         g_LeaveChatOnSubmit = true
 
+        -- FIXME: Some kind of hack for my own? Not sure what I'm up to.
         Callback2.FireAndForget(function() Component.GenerateEvent("XCU_ON_TOGGLE_UI", {visible = true}) end, nil, 0.3)
     else
         Debug.Warn("DaisyWheel_Activate called but DaisyWheel was already active.")
@@ -503,8 +503,8 @@ function DaisyWheel_Deactivate()
         g_KeySet_Daisy_XYAB:Activate(false)
         Debug.Log("Daisy Keysets Disabled")
 
-        -- Deactivate Aimpad mode
-        ToggleAimpadMode(false)
+        -- Deactivate thumbstick mode
+        ToggleThumbstickMode(false)
 
         -- Unlock pizza activator keysets
         g_KeySet_PizzaActivators:Activate(true) -- Todo: This is probably not good
@@ -533,21 +533,85 @@ function DaisyWheel_Deactivate()
     end
 end
 
+function ToggleThumbstickMode(enabled)
+    if enabled then
+        -- Swap thumbsticks, more comfortable to input this way
+        if DaisyOptions.Config.SwapThumbsticks then
+            System.SwapGamepadThumbsticks(true)
+        end
+
+        -- Backup user cvar settings
+        g_DaisyState.thumbstick.originalCvars[CVAR_GAMEPAD_SENSITIVITY_POW] = System.GetCvar(CVAR_GAMEPAD_SENSITIVITY_POW)
+        g_DaisyState.thumbstick.originalCvars[CVAR_GAMEPAD_SENSITIVITY_VERTMUL] = System.GetCvar(CVAR_GAMEPAD_SENSITIVITY_VERTMUL)
+
+        -- These values help ensure good responsiveness, the values are the client maximums (?)
+        System.SetCvar(CVAR_GAMEPAD_SENSITIVITY_POW, 3.5)
+        System.SetCvar(CVAR_GAMEPAD_SENSITIVITY_VERTMUL, 1)
+
+        -- Set initial state
+        g_DaisyState.thumbstick.initialCoordinates = Game.GetMapCoordinates()
+        g_DaisyState.thumbstick.previousCoordinates = Game.GetMapCoordinates()
+
+        -- Start thumbstick update cycle
+        CB2_DaisyThumbstickUpdate = Callback2.CreateCycle(DaisyThumbstickUpdate)
+        CB2_DaisyThumbstickUpdate:Run(0.25)
+
+        -- Cover all default UI
+        FRAME_FullscreenCover:Show(true)
+        SHINE_RAYS:SetParam("alpha", 0.25);
+        SHINE_ANIMATION_1:Play(0, 1, 60, true);
+        SHINE_ANIMATION_2:Play(1, 0, 60, true);
+
+
+        -- Open the game's world map so that this all works
+        Game.ShowWorldMap(true)
+        Game.ZoomWorldMap(0.1) -- Zoom out to near maximum to improve responsivness
+    else
+        -- Restore thumbsticks
+        if DaisyOptions.Config.SwapThumbsticks then
+            System.SwapGamepadThumbsticks(false)
+        end
+
+        -- Restore user cvar settings
+        System.SetCvar(CVAR_GAMEPAD_SENSITIVITY_POW, g_DaisyState.thumbstick.originalCvars[CVAR_GAMEPAD_SENSITIVITY_POW]) -- -1
+        System.SetCvar(CVAR_GAMEPAD_SENSITIVITY_VERTMUL, g_DaisyState.thumbstick.originalCvars[CVAR_GAMEPAD_SENSITIVITY_VERTMUL]) -- 0.66
+
+        -- Stop and cleanup thumbstick update cycle
+        CB2_DaisyThumbstickUpdate:Release()
+        CB2_DaisyThumbstickUpdate = nil
+
+        -- Cleanup state
+        g_DaisyState.thumbstick.initialCoordinates = nil
+        g_DaisyState.thumbstick.previousCoordinates = nil
+
+        -- Exit world map
+        Game.ShowWorldMap(false)
+
+        -- Uncover UI
+        SHINE_RAYS:ParamTo("alpha", 0, 1);
+        FRAME_FullscreenCover:Show(false)
+    end
+end
+
+
 function DaisyStateCycle()
     --Debug.Log("DaisyStateCycle")
 
     local previousDirection = g_DaisyState.direction
 
+    -- Update direction
     g_DaisyState.direction = DecideDaisyDirection()
 
+    --[[
     if g_DaisyState.direction ~= previousDirection then
         Output("Daisy Direction: " .. g_DaisyState.direction)
     end
+    --]]
 
+    -- Trigger UI updates
     UpdateDaisyDpadText()
     UpdateDaisyWidgetVisibility()
 end
-
 
 function UpdateDaisyDpadText()
     if not next(w_DaisyDPADTextWidgets) then
@@ -601,131 +665,62 @@ function UpdateDaisyWidgetVisibility()
 
            
 
-            local character = alphabetTable[g_DaisyState.mode][key][i]
+            local character = DaisyOptions["Alphabet"][g_DaisyState.mode][key][i]
             segmentWidgets.characterText:SetText(character)
         end
     end
 end
 
 
-CB2_AimpadState = nil
-g_AimpadState = {}
-g_AimpadState.enabled = false
-g_AimpadState.values = {}
-g_AimpadState.initialCoordinates = nil
-g_AimpadState.previousCoordinates = nil
-FRAME_FullscreenCover = Component.GetFrame("FullscreenCover")
-FRAME_FullscreenCover:Show(false)
-g_Aimpad_EnableMovementPreventionHack = false
-function ToggleAimpadMode(enabled)
-
-    if g_Aimpad then
-
-        if enabled then 
-
-            System.SwapGamepadThumbsticks(true)
-
-            System.SetCvar("aim.sensitivity_pow_gamepad", 3.5)
-            System.SetCvar("aim.sensitivity_vertmul_gamepad", 1)
-
-          
-
-            g_AimpadState.initialCoordinates = Game.GetMapCoordinates()
-            g_AimpadState.previousCoordinates = Game.GetMapCoordinates()
-
-            CB2_AimpadState = Callback2.CreateCycle(UpdateAimpadState)
-            CB2_AimpadState:Run(0.25)
-
-            Game.ShowWorldMap(true)
-            Game.ZoomWorldMap(0.1)
-            --Game.SetMapInputMode("cursor")
-            FRAME_FullscreenCover:Show(true)
-        else
-
-            System.SwapGamepadThumbsticks(false)
-            System.SetCvar("aim.sensitivity_pow_gamepad", -1)
-            System.SetCvar("aim.sensitivity_vertmul_gamepad", 0.66)
-            CB2_AimpadState:Release()
-            CB2_AimpadState = nil
-
-            g_AimpadState.initialCoordinates = nil
-            g_AimpadState.previousCoordinates = nil
-
-            Game.ShowWorldMap(false)
-            FRAME_FullscreenCover:Show(false)
-        end
-
-    end
-
+function IsCoordinateEqualWithinTolerance(coord1, coord2, tolerance)
+    return (IsValueEqualWithinTolerance(coord1.x, coord2.x, tolerance) and IsValueEqualWithinTolerance(coord1.y, coord2.y, tolerance))
 end
 
-
-MAX_PITCH_APPROX = 1.5
-MIN_PITCH_APPROX = -1.5
-MAX_YAW_APPROX = 6.3
-MIN_YAW_APPROX = 0
-AIMPAD_UPDATE_INTERVAL_SECONDS = 0.25
-AIMPAD_APPROX_INTERVAL_SECONDS = 1
-AIMPAD_NUMBER_OF_VALUES_PER_APPROX = AIMPAD_APPROX_INTERVAL_SECONDS / AIMPAD_APPROX_INTERVAL_SECONDS -- ugh this isnt sensible
-COORDINATE_TOLERANCE = 2
-function round(x)
-  if x%2 ~= 0.5 then
-    return math.floor(x+0.5)
-  end
-  return x-0.5
+function IsValueEqualWithinTolerance(value1, value2, tolerance)
+    return IsNumberWithinRange(value1, value2-tolerance, value2+tolerance)
 end
 
-function isCoordinatesEqual(c1, c2)
-    return (c1.x == c2.x and c1.y == c2.y)
-end
-
-function areCoordinatesMostlyEqual(c1, c2, tolerance)
-    tolerance = tolerance or COORDINATE_TOLERANCE
-    return isNumberWithinRange(c1.x, c2.x-tolerance, c2.x+tolerance) and isNumberWithinRange(c1.y, c2.y-tolerance, c2.y+tolerance)
-end
-
-function isNumberWithinRange(number, min, max)
+function IsNumberWithinRange(number, min, max)
     return (number >= min and number <= max)
 end
 
 
-function UpdateAimpadState()
+function DaisyThumbstickUpdate()
+
     -- Get current coordinates
     local currentCoordinates = Game.GetMapCoordinates()
     --Output("Map Pos: " .. tostring(currentCoordinates))
 
     -- should we reset?
     -- yes if coordinates unchanged and not equal to initial
-    if not areCoordinatesMostlyEqual(currentCoordinates, g_AimpadState.initialCoordinates) then -- and areCoordinatesMostlyEqual(currentCoordinates, g_AimpadState.previousCoordinates)
+    if not IsCoordinateEqualWithinTolerance(currentCoordinates, g_DaisyState.thumbstick.initialCoordinates, DaisyOptions.Config.ThumbstickCoordinateTolerance) then
         Game.ShowWorldMap(false)
         callback(Game.ShowWorldMap, true, 0.1)
     end
 
-    
+    -- Reset axis state
+    g_DaisyState.thumbstick.horizontal = nil
+    g_DaisyState.thumbstick.vertical = nil
 
-
-    g_AimpadState.hor = nil
-    g_AimpadState.ver = nil
-
-    if not isNumberWithinRange(currentCoordinates.x, g_AimpadState.initialCoordinates.x-COORDINATE_TOLERANCE, g_AimpadState.initialCoordinates.x+COORDINATE_TOLERANCE) then
-        g_AimpadState.hor = (currentCoordinates.x > g_AimpadState.initialCoordinates.x) and "right" or "left"
+    -- Determine horizontal state
+    if not IsValueEqualWithinTolerance(currentCoordinates.x, g_DaisyState.thumbstick.initialCoordinates.x, DaisyOptions.Config.ThumbstickCoordinateTolerance) then
+        g_DaisyState.thumbstick.horizontal = (currentCoordinates.x > g_DaisyState.thumbstick.initialCoordinates.x) and DaisyConstants.Direction.Right or DaisyConstants.Direction.Left
     end
 
-    if not isNumberWithinRange(currentCoordinates.y, g_AimpadState.initialCoordinates.y-COORDINATE_TOLERANCE, g_AimpadState.initialCoordinates.y+COORDINATE_TOLERANCE) then
-        g_AimpadState.ver = (currentCoordinates.y > g_AimpadState.initialCoordinates.y) and "up" or "down"
+    -- Determine vertical state
+    if not IsValueEqualWithinTolerance(currentCoordinates.y, g_DaisyState.thumbstick.initialCoordinates.y, DaisyOptions.Config.ThumbstickCoordinateTolerance)  then
+        g_DaisyState.thumbstick.vertical = (currentCoordinates.y > g_DaisyState.thumbstick.initialCoordinates.y) and DaisyConstants.Direction.Up or DaisyConstants.Direction.Down
     end
 
-    --Output("Hor: " .. tostring(g_AimpadState.hor) .. ", Ver: " .. tostring(g_AimpadState.ver))
-
-
+    --Output("Hor: " .. tostring(g_DaisyState.thumbstick.horizontal) .. ", Ver: " .. tostring(g_DaisyState.thumbstick.vertical))
 
     -- Spam events to prevent movement
-    if g_Aimpad_EnableMovementPreventionHack then
+    if DaisyOptions.Config.ThumbstickMovementPreventionHack then
         Component.GenerateEvent("MY_BEGIN_CHAT", {text = ""})
     end
 
     -- Save Previous Coordinates
-    g_AimpadState.previousCoordinates = currentCoordinates
+    g_DaisyState.thumbstick.previousCoordinates = currentCoordinates
 end
 
 
@@ -734,15 +729,29 @@ function DecideDaisyDirection()
     
     local pressedKeys = {}
     
-    if g_Aimpad then
-        if g_AimpadState.hor then table.insert(pressedKeys, g_AimpadState.hor) end
-        if g_AimpadState.ver then table.insert(pressedKeys, g_AimpadState.ver) end
-    else
-        for key, pressed in pairs(g_DaisyState.dpad) do
-            if pressed then table.insert(pressedKeys, key) end
-        end
+    if DaisyOptions.Config.DirectionMethod == DaisyConstants.DirectionMethod.Thumbstick
+    or DaisyOptions.Config.DirectionMethod == DaisyConstants.DirectionMethod.Either
+    then
+        if g_DaisyState.thumbstick.horizontal then table.insert(pressedKeys, g_DaisyState.thumbstick.horizontal) end
+        if g_DaisyState.thumbstick.vertical then table.insert(pressedKeys, g_DaisyState.thumbstick.vertical) end
     end
 
+    if DaisyOptions.Config.DirectionMethod == DaisyConstants.DirectionMethod.DPAD
+    or DaisyOptions.Config.DirectionMethod == DaisyConstants.DirectionMethod.Either
+    then
+        for key, pressed in pairs(g_DaisyState.dpad) do
+            -- Extra logic to avoid duplicates when we get presses from both thumbstick and dpad
+            local duplicate = false
+            if DaisyOptions.Config.DirectionMethod == DaisyConstants.DirectionMethod.Either then 
+                for index, existing in pairs(pressedKeys) do
+                    if key == existing then duplicate = true break end
+                end
+            end
+
+            if pressed and not duplicate then table.insert(pressedKeys, key) end
+        end
+    end
+    
     local direction = "none"
 
     if #pressedKeys == 1 then
@@ -755,10 +764,10 @@ function DecideDaisyDirection()
         --Output(" ***** Daisy Direction: " .. pressedKeys[1] .. " + " .. pressedKeys[2])
 
         local acceptedCombos = {
-            ["left-down"] = {"left", "down"},
-            ["right-down"] = {"right", "down"},
-            ["left-up"] = {"left", "up"},
-            ["right-up"] = {"right", "up"},
+            [DaisyConstants.Direction.LeftDown] = {DaisyConstants.Direction.Left, DaisyConstants.Direction.Down},
+            [DaisyConstants.Direction.RightDown] = {DaisyConstants.Direction.Right, DaisyConstants.Direction.Down},
+            [DaisyConstants.Direction.LeftUp] = {DaisyConstants.Direction.Left, DaisyConstants.Direction.Up},
+            [DaisyConstants.Direction.RightUp] = {DaisyConstants.Direction.Right, DaisyConstants.Direction.Up},
         }
 
 
@@ -900,20 +909,20 @@ daisy_submit
     elseif action == "daisy_caps" or action == "daisy_numbers" then
 
         -- Get key
-        local modifierKey = (action == "daisy_caps" and "caps") or "numbers"
+        local modifierKey = (action == "daisy_caps" and DaisyConstants.AlphabetMode.Caps) or DaisyConstants.AlphabetMode.Numbers
         
         -- Update value
         g_DaisyState.modifiers[modifierKey] = args.is_pressed
 
         -- Determine mode
         if g_DaisyState.modifiers.caps and g_DaisyState.modifiers.numbers then
-            g_DaisyState.mode = "special"
+            g_DaisyState.mode = DaisyConstants.AlphabetMode.Special
         elseif g_DaisyState.modifiers.caps then
-            g_DaisyState.mode = "caps"
+            g_DaisyState.mode = DaisyConstants.AlphabetMode.Caps
         elseif g_DaisyState.modifiers.numbers then
-            g_DaisyState.mode = "numbers"
+            g_DaisyState.mode = DaisyConstants.AlphabetMode.Numbers
         else
-            g_DaisyState.mode = "default"
+            g_DaisyState.mode = DaisyConstants.AlphabetMode.Default
         end
 
 
@@ -928,18 +937,26 @@ daisy_submit
                 if action == "daisy_space" then
                     character = " "
                 else
-                    local characterTable = alphabetTable[g_DaisyState.mode][g_DaisyState.direction]
+                    local characterTable = DaisyOptions["Alphabet"][g_DaisyState.mode][g_DaisyState.direction]
                     character = characterTable[PIZZA_KEYBINDINGS_KEYCODE_INDEX[args.keycode]]
                 end
 
-                --g_DaisyPreviouslyTyped = g_DaisyPreviouslyTyped .. character
-                --ChatLib.AddTextToChatInput({text = character})
                 ChatInput_OnAddChatInput({text = character})
             end
         end
     end
  end
 
+
+function ThumbstickTest(args)
+
+    args.event = "ThumbstickTest " .. args.name
+
+    Debug.Event(args)
+
+    Component.GenerateEvent("MY_FULLPANEL_EVENT", {})
+
+end
 
 
 

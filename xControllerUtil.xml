@@ -50,7 +50,11 @@
         <Texture name="eventsBG" src="components/MainUI/Panels/Dashboard/textures/eventsBG.png" premultiplied="false"/>
         
         <Texture name="DaisyWheel_Petal" src="./textures/petal.png" premultiplied="false"/>
-
+    
+        <Texture name="LoginUI" src="components/LoginUI/LoginBackground/Login.dds" premultiplied="true">
+            <Region name="Flare" top="298" bottom="864" left="0" right="579" />
+            <Region name="Interface" top="0" bottom="296" left="0" right="728" />
+        </Texture>
     </Textures>
 
     <Styles>
@@ -257,7 +261,11 @@
 
         <PanelFrame name="FullscreenCover" dimensions="left:0; top:0; width:100%; height:100%;" permanent="true" visible="true" depth="9">
             <Children>
-                <StillArt name="black" dimensions="width:100%; height:100%" style="texture:colors; region:black"/>
+                <StillArt name="black" dimensions="width:100%; height:100%" style="texture:colors; region:black; alpha:1;"/>
+                <Group id="Rays" dimensions="dock:fill" style="alpha:0.0">
+                    <Animation id="shine1" dimensions="dock:fill" mesh="rotater" style="texture:LoginUI; region:Flare; alpha:0.3; exposure:1.0; tint:A0E0FF"/>
+                    <Animation id="shine2" dimensions="dock:fill" mesh="rotater" style="texture:LoginUI; region:Flare; alpha:0.2; exposure:1.0; tint:A0E0FF"/>
+                </Group>
             </Children>
         </PanelFrame>
 
