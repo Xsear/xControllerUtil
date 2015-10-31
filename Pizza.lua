@@ -422,6 +422,7 @@ function Pizza_UpdateAll(args)
         UpdatePizzaSlots(pizza)
 
         -- Recreate pizza widget
+        if pizza.w_PIZZA then Component.RemoveWidget(pizza.w_PIZZA) end
         pizza.w_PIZZA = {}
         pizza.w_PIZZA = CreatePizza(w_PIZZA_CONTAINER, pizza.slots)
         pizza.w_PIZZA:Show(false)
