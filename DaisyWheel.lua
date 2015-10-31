@@ -1402,8 +1402,14 @@ AUTOCOMPLETE_LIMIT_RESULTS = 4
 AUTOCOMPLETE_LIMIT_SCAN = 50
 function StartAutoCompleteScan()
 
+    -- Identify query
+    for word in unicode.gmatch(DAISY_INPUT:GetText(), "%S+") do
+       g_AutoCompleteScan.query = word
 
-    g_AutoCompleteScan.query = unicode.lower(DAISY_INPUT:GetText())
+    end
+    g_AutoCompleteScan.query = unicode.lower(g_AutoCompleteScan.query)
+    
+
     g_AutoCompleteScan.inProgress = true
     g_AutoCompleteScan.results = {}
 
