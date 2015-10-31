@@ -559,7 +559,7 @@ function ToggleThumbstickMode(enabled)
 
         -- Start thumbstick update cycle
         CB2_DaisyThumbstickUpdate = Callback2.CreateCycle(DaisyThumbstickUpdate)
-        CB2_DaisyThumbstickUpdate:Run(0.25)
+        CB2_DaisyThumbstickUpdate:Run(0.1) --0.25
 
         -- Cover all default UI
         FRAME_FullscreenCover:Show(DaisyOptions.Config.CoverUpTheHack)
@@ -657,10 +657,17 @@ function UpdatedAutoCompleteWidgets()
         end
     end
 
-    for index, result in ipairs(g_AutoCompleteScan.previousResults) do
-        local widget = w_DaisyAutoTextWidgets[index]
-        widget:SetText("XYAB #" .. tostring(index) .. ": " .. result.word)
-        widget:SetTextColor("#ff0000")
+    for index, widget in ipairs(w_DaisyAutoTextWidgets) do
+
+        local result = g_AutoCompleteScan.previousResults[index] or nil
+
+        if result then
+            widget:SetText("XYAB #" .. tostring(index) .. ": " .. result.word)
+            widget:SetTextColor("#ff0000")
+        else
+            widget:SetText("")
+        end
+
     end
 
 end
@@ -720,8 +727,9 @@ function DaisyThumbstickUpdate()
     -- should we reset?
     -- yes if coordinates unchanged and not equal to initial
     if not IsCoordinateEqualWithinTolerance(currentCoordinates, g_DaisyState.thumbstick.initialCoordinates, DaisyOptions.Config.ThumbstickCoordinateTolerance) then
-        Game.ShowWorldMap(false)
-        callback(Game.ShowWorldMap, true, 0.1)
+        --Game.ShowWorldMap(false)
+        --callback(Game.ShowWorldMap, true, 0.1)
+        Game.SetMapCoordinates(g_DaisyState.thumbstick.initialCoordinates.x, g_DaisyState.thumbstick.initialCoordinates.y, g_DaisyState.thumbstick.initialCoordinates.z)
     end
 
     -- Reset axis state
@@ -1357,19 +1365,27 @@ function AutoCompleteScanTrigger()
     local currentText = DAISY_INPUT:GetText()
     local length = unicode.len(currentText)
     if length > 2 then
-        Debug.Log("Starting!")
-        if CB2_DaisyAutoCompleteScanStarter == nil then
-            CB2_DaisyAutoCompleteScanStarter = Callback2.Create()
-            CB2_DaisyAutoCompleteScanStarter:Bind(StartAutoCompleteScan)
-            CB2_DaisyAutoCompleteScanStarter:Schedule(1)
-        else
-            CB2_DaisyAutoCompleteScanStarter:Reschedule(1)
+        -- If we should start and we haven't already started
+        if not g_AutoCompleteScan.inProgress then
+            Debug.Log("Setting CB2_DaisyAutoCompleteScanStarter")
+            if CB2_DaisyAutoCompleteScanStarter == nil then
+                CB2_DaisyAutoCompleteScanStarter = Callback2.Create()
+                CB2_DaisyAutoCompleteScanStarter:Bind(StartAutoCompleteScan)
+                CB2_DaisyAutoCompleteScanStarter:Schedule(1)
+            else
+                CB2_DaisyAutoCompleteScanStarter:Reschedule(1)
+            end
         end
     else
-        if CB2_DaisyAutoCompleteScanStarter and CB2_DaisyAutoCompleteScanStarter:IsPending() then
-            CB2_DaisyAutoCompleteScanStarter:Release()
-            CB2_DaisyAutoCompleteScanStarter = nil
+        -- If we should not start, and we haven't started
+        if not g_AutoCompleteScan.inProgress then
+            -- Kill any attempts to start
+            if CB2_DaisyAutoCompleteScanStarter and CB2_DaisyAutoCompleteScanStarter:Pending() then
+                CB2_DaisyAutoCompleteScanStarter:Release()
+                CB2_DaisyAutoCompleteScanStarter = nil
+            end
         end
+        
     end
 end
 
@@ -1390,6 +1406,10 @@ function StartAutoCompleteScan()
     g_AutoCompleteScan.query = unicode.lower(DAISY_INPUT:GetText())
     g_AutoCompleteScan.inProgress = true
     g_AutoCompleteScan.results = {}
+
+    CB2_DaisyAutoCompleteScanStarter:Release()
+    CB2_DaisyAutoCompleteScanStarter = nil
+
     CB2_AutoCompleteScanCycle = Callback2.CreateCycle(AutoCompleteScanCycle)
     CB2_AutoCompleteScanCycle:Run(0.25)
 end
@@ -1444,7 +1464,7 @@ function AutoCompleteScanCycle()
     while index < stopIndex do
         local word = g_Dictionary[index]
 
-        if unicode.match(word, query) ~= nil then
+        if word ~= query and unicode.match(word, query) ~= nil then
             local suggestion = {word=word,badness=unicode.match(word, query)}
             
             if #g_AutoCompleteScan.results >= AUTOCOMPLETE_LIMIT_RESULTS then
@@ -1485,8 +1505,29 @@ function PerformAutoCompletion(result)
     local query = g_AutoCompleteScan.previousQuery
 
     local currentText = DAISY_INPUT:GetText()
-    local completedText = unicode.gsub(currentText, query, word)
+    local completedText
+    if not unicode.match(currentText, query) then
+        -- case mismatch
+        local caseSensitiveQuery = nil
+        for textWord in unicode.gmatch(currentText, "%a+") do
+            if unicode.lower(textWord) == query then
+                caseSensitiveQuery = textWord
+            end
+        end
+
+        if caseSensitiveQuery then
+            completedText = unicode.gsub(currentText, caseSensitiveQuery, word) .. " "
+        else
+            Debug.Warn("failed to perform auto completion :(")
+            completedText = currentText
+        end
+    else
+        completedText = unicode.gsub(currentText, query, word) .. " "
+    end
 
     DAISY_INPUT:SetText(completedText)
 
+    -- clear other completions
+    g_AutoCompleteScan.previousResults = {}
+    UpdatedAutoCompleteWidgets()
 end
