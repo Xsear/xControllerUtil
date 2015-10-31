@@ -7,6 +7,8 @@
 require 'lib/lib_NavWheel'
 require 'lib/lib_ContextWheel'
 
+g_Aimpad = true
+
 g_KeySet_Daisy_DPAD = nil
 g_KeySet_Daisy_XYAB = nil
 g_DaisyState = {
@@ -438,9 +440,10 @@ function DaisyWheel_Activate()
 
         -- Ensure cursor mode so that Chat displays
         Component.SetInputMode("cursor")
-        Debug.Log("Cursor mode engaged")
+        if not g_Aimpad then Component.SetInputMode("cursor") Debug.Log("Cursor mode engaged") end
+        
 
-        -- Start DPAD State Cycle
+        -- Start Daisy State Cycle
         CB2_DaisyStateCycle = Callback2.CreateCycle(DaisyStateCycle)
         CB2_DaisyStateCycle:Run(0.25)
 
@@ -463,6 +466,9 @@ function DaisyWheel_Activate()
             System.ApplyKeyBindings()
             Debug.Log("Submit bound")
         --]]
+
+        -- Activate Aimpad mode
+        ToggleAimpadMode(true)
 
         -- Display Daisy Wheel
         FRAME:Show(true)
@@ -496,6 +502,9 @@ function DaisyWheel_Deactivate()
         g_KeySet_Daisy_DPAD:Activate(false)
         g_KeySet_Daisy_XYAB:Activate(false)
         Debug.Log("Daisy Keysets Disabled")
+
+        -- Deactivate Aimpad mode
+        ToggleAimpadMode(false)
 
         -- Unlock pizza activator keysets
         g_KeySet_PizzaActivators:Activate(true) -- Todo: This is probably not good
@@ -598,12 +607,140 @@ function UpdateDaisyWidgetVisibility()
     end
 end
 
+
+CB2_AimpadState = nil
+g_AimpadState = {}
+g_AimpadState.enabled = false
+g_AimpadState.values = {}
+g_AimpadState.initialCoordinates = nil
+g_AimpadState.previousCoordinates = nil
+FRAME_FullscreenCover = Component.GetFrame("FullscreenCover")
+FRAME_FullscreenCover:Show(false)
+g_Aimpad_EnableMovementPreventionHack = false
+function ToggleAimpadMode(enabled)
+
+    if g_Aimpad then
+
+        if enabled then 
+
+            System.SwapGamepadThumbsticks(true)
+
+            System.SetCvar("aim.sensitivity_pow_gamepad", 3.5)
+            System.SetCvar("aim.sensitivity_vertmul_gamepad", 1)
+
+          
+
+            g_AimpadState.initialCoordinates = Game.GetMapCoordinates()
+            g_AimpadState.previousCoordinates = Game.GetMapCoordinates()
+
+            CB2_AimpadState = Callback2.CreateCycle(UpdateAimpadState)
+            CB2_AimpadState:Run(0.25)
+
+            Game.ShowWorldMap(true)
+            Game.ZoomWorldMap(0.1)
+            --Game.SetMapInputMode("cursor")
+            FRAME_FullscreenCover:Show(true)
+        else
+
+            System.SwapGamepadThumbsticks(false)
+            System.SetCvar("aim.sensitivity_pow_gamepad", -1)
+            System.SetCvar("aim.sensitivity_vertmul_gamepad", 0.66)
+            CB2_AimpadState:Release()
+            CB2_AimpadState = nil
+
+            g_AimpadState.initialCoordinates = nil
+            g_AimpadState.previousCoordinates = nil
+
+            Game.ShowWorldMap(false)
+            FRAME_FullscreenCover:Show(false)
+        end
+
+    end
+
+end
+
+
+MAX_PITCH_APPROX = 1.5
+MIN_PITCH_APPROX = -1.5
+MAX_YAW_APPROX = 6.3
+MIN_YAW_APPROX = 0
+AIMPAD_UPDATE_INTERVAL_SECONDS = 0.25
+AIMPAD_APPROX_INTERVAL_SECONDS = 1
+AIMPAD_NUMBER_OF_VALUES_PER_APPROX = AIMPAD_APPROX_INTERVAL_SECONDS / AIMPAD_APPROX_INTERVAL_SECONDS -- ugh this isnt sensible
+COORDINATE_TOLERANCE = 2
+function round(x)
+  if x%2 ~= 0.5 then
+    return math.floor(x+0.5)
+  end
+  return x-0.5
+end
+
+function isCoordinatesEqual(c1, c2)
+    return (c1.x == c2.x and c1.y == c2.y)
+end
+
+function areCoordinatesMostlyEqual(c1, c2, tolerance)
+    tolerance = tolerance or COORDINATE_TOLERANCE
+    return isNumberWithinRange(c1.x, c2.x-tolerance, c2.x+tolerance) and isNumberWithinRange(c1.y, c2.y-tolerance, c2.y+tolerance)
+end
+
+function isNumberWithinRange(number, min, max)
+    return (number >= min and number <= max)
+end
+
+
+function UpdateAimpadState()
+    -- Get current coordinates
+    local currentCoordinates = Game.GetMapCoordinates()
+    --Output("Map Pos: " .. tostring(currentCoordinates))
+
+    -- should we reset?
+    -- yes if coordinates unchanged and not equal to initial
+    if not areCoordinatesMostlyEqual(currentCoordinates, g_AimpadState.initialCoordinates) then -- and areCoordinatesMostlyEqual(currentCoordinates, g_AimpadState.previousCoordinates)
+        Game.ShowWorldMap(false)
+        callback(Game.ShowWorldMap, true, 0.1)
+    end
+
+    
+
+
+    g_AimpadState.hor = nil
+    g_AimpadState.ver = nil
+
+    if not isNumberWithinRange(currentCoordinates.x, g_AimpadState.initialCoordinates.x-COORDINATE_TOLERANCE, g_AimpadState.initialCoordinates.x+COORDINATE_TOLERANCE) then
+        g_AimpadState.hor = (currentCoordinates.x > g_AimpadState.initialCoordinates.x) and "right" or "left"
+    end
+
+    if not isNumberWithinRange(currentCoordinates.y, g_AimpadState.initialCoordinates.y-COORDINATE_TOLERANCE, g_AimpadState.initialCoordinates.y+COORDINATE_TOLERANCE) then
+        g_AimpadState.ver = (currentCoordinates.y > g_AimpadState.initialCoordinates.y) and "up" or "down"
+    end
+
+    --Output("Hor: " .. tostring(g_AimpadState.hor) .. ", Ver: " .. tostring(g_AimpadState.ver))
+
+
+
+    -- Spam events to prevent movement
+    if g_Aimpad_EnableMovementPreventionHack then
+        Component.GenerateEvent("MY_BEGIN_CHAT", {text = ""})
+    end
+
+    -- Save Previous Coordinates
+    g_AimpadState.previousCoordinates = currentCoordinates
+end
+
+
 function DecideDaisyDirection()
+    
     
     local pressedKeys = {}
     
-    for key, pressed in pairs(g_DaisyState.dpad) do
-        if pressed then table.insert(pressedKeys, key) end
+    if g_Aimpad then
+        if g_AimpadState.hor then table.insert(pressedKeys, g_AimpadState.hor) end
+        if g_AimpadState.ver then table.insert(pressedKeys, g_AimpadState.ver) end
+    else
+        for key, pressed in pairs(g_DaisyState.dpad) do
+            if pressed then table.insert(pressedKeys, key) end
+        end
     end
 
     local direction = "none"
@@ -647,6 +784,7 @@ function DecideDaisyDirection()
     end
 
     return direction
+
 
 end
 
@@ -1149,7 +1287,7 @@ function ChatInput_DoBackspace(args)
     if previousText ~= "" then
         local newText = unicode.sub(previousText, 1, -2)
         DAISY_INPUT:SetText(newText)
-        if args and args.callback then CB2_DaisyBackspace:Schedule(0.05) end
+        --if args and args.callback then CB2_DaisyBackspace:Schedule(0.05) end
     else
         Output("Nothing to remove!")
     end

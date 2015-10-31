@@ -246,12 +246,18 @@
             <OnEscape bind="OnClose"/>
         </PanelFrame>
         
-        <PanelFrame name="DaisyWheel" dimensions="center-y:50%; center-x:50%; width:50%; height:50%;" permanent="true" visible="true" depth="10">
+        <PanelFrame name="DaisyWheel" dimensions="center-y:50%; center-x:50%; width:50%; height:50%;" permanent="true" visible="true" depth="8">
             <Children>
                 <Group id="DaisyContainer" dimensions="dock:fill">
                     <StillArt name="iconBackground" dimensions="width:105%; height:125%" style="texture:3dActionBar; region:circle; tint:000000; alpha:0.4"/>
                     <!--<StillArt name="iconBackground" dimensions="width:100%; height:100%" style="texture:3dActionBar; region:circle; tint:2222dd; alpha:0.2"/>-->
                 </Group>
+            </Children>
+        </PanelFrame>
+
+        <PanelFrame name="FullscreenCover" dimensions="left:0; top:0; width:100%; height:100%;" permanent="true" visible="true" depth="9">
+            <Children>
+                <StillArt name="black" dimensions="width:100%; height:100%" style="texture:colors; region:black"/>
             </Children>
         </PanelFrame>
 
