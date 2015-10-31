@@ -147,17 +147,6 @@ local daisyGetOppositeAxis = {
 }
 
 local alphabetTable = {
-    ["up"]         = {"a", "b", "c", "d"},
-    ["right-up"]   = {"e", "f", "g", "h"},
-    ["right"]      = {"i", "j", "k", "l"},
-    ["right-down"] = {"m", "n", "o", "p"},
-    ["down"]       = {"q", "r", "s", "t"},
-    ["left-down"]  = {"u", "v", "w", "x"},
-    ["left"]       = {"y", "z", ",", "."},
-    ["left-up"]    = {":", "/", "@", "-"},
-}
-
-local fullAlphabetTable = {
     ["default"] = {
             ["up"]         = {"a", "b", "c", "d"},
             ["right-up"]   = {"e", "f", "g", "h"},
@@ -199,50 +188,6 @@ local fullAlphabetTable = {
             ["left-up"]    = {"", "", "", ""},
     },
 }
-
-local fullAlphabetTableKeycodes = {
-    ["default"] = {
-            ["up"]         = {65, 66, 67, 68},
-            ["right-up"]   = {69, 70, 71, 72},
-            ["right"]      = {73, 74, 75, 76},
-            ["right-down"] = {77, 78, 79, 80},
-            ["down"]       = {81, 82, 83, 84},
-            ["left-down"]  = {85, 86, 87, 88},
-            ["left"]       = {89, 90, 0, 0},
-            ["left-up"]    = {186, 191, 276, 189},
-    },
-    ["caps"] = {
-            ["up"]         = {65, 66, 67, 68},
-            ["right-up"]   = {69, 70, 71, 72},
-            ["right"]      = {73, 74, 75, 76},
-            ["right-down"] = {77, 78, 79, 80},
-            ["down"]       = {81, 82, 83, 84},
-            ["left-down"]  = {85, 86, 87, 88},
-            ["left"]       = {89, 90, 0, 0},
-            ["left-up"]    = {186, 226, 276, 189},
-    },
-    ["numbers"] = {
-            ["up"]         = {49, 50, 51, 52},
-            ["right-up"]   = {53, 54, 55, 56},
-            ["right"]      = {57, 48, 106, 107},
-            ["right-down"] = {0, 0, 0, 192},
-            ["down"]       = {222, 226, 192, 0},
-            ["left-down"]  = {187, 0, 0, 0},
-            ["left"]       = {188, 190, 219, 221},
-            ["left-up"]    = {186, 226, 276, 189},
-    },
-    ["special"] = {
-            ["up"]         = {0, 0, 0, 0},
-            ["right-up"]   = {0, 0, 0, 0},
-            ["right"]      = {0, "", "", ""},
-            ["right-down"] = {"", "", "", ""},
-            ["down"]       = {"", "", "", ""},
-            ["left-down"]  = {"", "", "", ""},
-            ["left"]       = {"", "", "", ""},
-            ["left-up"]    = {"", "", "", ""},
-    },
-}
-
 
 local alphabetTableIndex = {
     [1] = "up",
@@ -436,7 +381,7 @@ function BuildDaisyWheel(args)
         w_DaisyWheelPetalWidgets[#w_DaisyWheelPetalWidgets + 1] = PETAL
 
         -- Character table for this petal
-        local characterTable = fullAlphabetTable["default"][alphabetTableIndex[i]]
+        local characterTable = alphabetTable["default"][alphabetTableIndex[i]]
 
         local numberOfSegments = 4 -- # characters/segments per petal
         local perSegmentPrecent = (100/numberOfSegments)
@@ -647,7 +592,7 @@ function UpdateDaisyWidgetVisibility()
 
            
 
-            local character = fullAlphabetTable[g_DaisyState.mode][key][i]
+            local character = alphabetTable[g_DaisyState.mode][key][i]
             segmentWidgets.characterText:SetText(character)
         end
     end
@@ -845,7 +790,7 @@ daisy_submit
                 if action == "daisy_space" then
                     character = " "
                 else
-                    local characterTable = fullAlphabetTable[g_DaisyState.mode][g_DaisyState.direction]
+                    local characterTable = alphabetTable[g_DaisyState.mode][g_DaisyState.direction]
                     character = characterTable[PIZZA_KEYBINDINGS_KEYCODE_INDEX[args.keycode]]
                 end
 
