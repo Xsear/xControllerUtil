@@ -156,9 +156,11 @@ g_DaisyPausedOppositeAxis = false
 
 w_DaisyWheelTableWidgets = {}
 w_DaisyDPADTextWidgets = {}
+w_DaisyAutoTextWidgets = {}
 
 local CB2_DaisyBackspace = nil
 local CB2_DaisyThumbstickUpdate = nil
+local CB2_DaisyAutoCompleteScanStarter = nil
 
 local FRAME = Component.GetFrame("DaisyWheel")
 FRAME:Show(false)
@@ -645,6 +647,24 @@ function UpdateDaisyDpadText()
     end
 end
 
+function UpdatedAutoCompleteWidgets()
+    
+    if not next(w_DaisyAutoTextWidgets) then
+        local tempCount = 0
+        for i=1,4 do
+            w_DaisyAutoTextWidgets[i] = Component.CreateWidget('<Text dimensions="left:0;height:100; width:20%; top:'..tostring(50 + (30*tempCount))..'" />', FRAME)
+            tempCount = tempCount + 1
+        end
+    end
+
+    for index, result in ipairs(g_AutoCompleteScan.previousResults) do
+        local widget = w_DaisyAutoTextWidgets[index]
+        widget:SetText("XYAB #" .. tostring(index) .. ": " .. result.word)
+        widget:SetTextColor("#ff0000")
+    end
+
+end
+
 function UpdateDaisyWidgetVisibility()
     for key, widget in pairs(w_DaisyWheelTableWidgets) do
         widget:Show(true)
@@ -936,7 +956,16 @@ daisy_submit
     else
         if args.is_pressed then
             if action ~= "daisy_space" and g_DaisyState.direction == "none" then
-                Output("daisy xyab but no direction")
+
+                local index = PIZZA_KEYBINDINGS_KEYCODE_INDEX[args.keycode]
+                if g_AutoCompleteScan.previousResults[index] then
+                    Output("daisy xyab autocomplete")
+                    PerformAutoCompletion(g_AutoCompleteScan.previousResults[index])
+                else
+                    Output("daisy xyab but no direction and no autocomplete")
+                end
+
+
             else
                 local character = ""
 
@@ -1138,6 +1167,7 @@ end
 
 function ChatInput_OnChatType(args)
     Debug.Event(args)
+    AutoCompleteScanTrigger()
 end
 function ChatInput_OnChatSubmit(args)
     Debug.Event(args)
@@ -1317,4 +1347,146 @@ end
 
 function ChatInput_DoSubmit()
     ChatInput_OnChatSubmit()
+end
+
+
+
+function AutoCompleteScanTrigger()
+    Debug.Log("AutoCompleteScanTrigger")
+    --TODO: Needs to handle scenario when the auto complete scan is already started
+    local currentText = DAISY_INPUT:GetText()
+    local length = unicode.len(currentText)
+    if length > 2 then
+        Debug.Log("Starting!")
+        if CB2_DaisyAutoCompleteScanStarter == nil then
+            CB2_DaisyAutoCompleteScanStarter = Callback2.Create()
+            CB2_DaisyAutoCompleteScanStarter:Bind(StartAutoCompleteScan)
+            CB2_DaisyAutoCompleteScanStarter:Schedule(1)
+        else
+            CB2_DaisyAutoCompleteScanStarter:Reschedule(1)
+        end
+    else
+        if CB2_DaisyAutoCompleteScanStarter and CB2_DaisyAutoCompleteScanStarter:IsPending() then
+            CB2_DaisyAutoCompleteScanStarter:Release()
+            CB2_DaisyAutoCompleteScanStarter = nil
+        end
+    end
+end
+
+g_AutoCompleteScan = {}
+g_AutoCompleteScan.inProgress = false
+g_AutoCompleteScan.currentIndex = 1
+g_AutoCompleteScan.query = nil
+g_AutoCompleteScan.results = {}
+g_AutoCompleteScan.previousResults = {}
+g_AutoCompleteScan.previousQuery = nil
+CB2_AutoCompleteScanCycle = nil
+require "./dictionary"
+AUTOCOMPLETE_LIMIT_RESULTS = 4
+AUTOCOMPLETE_LIMIT_SCAN = 50
+function StartAutoCompleteScan()
+
+
+    g_AutoCompleteScan.query = unicode.lower(DAISY_INPUT:GetText())
+    g_AutoCompleteScan.inProgress = true
+    g_AutoCompleteScan.results = {}
+    CB2_AutoCompleteScanCycle = Callback2.CreateCycle(AutoCompleteScanCycle)
+    CB2_AutoCompleteScanCycle:Run(0.25)
+end
+
+function StopAutoCompleteScan(success)
+    Debug.Log("autocomplete scan ended, success == ", success)
+    Debug.Table("autocomplete results", g_AutoCompleteScan.results)
+
+
+    if success then
+        Output("AutoCompleteScan success")
+        
+        g_AutoCompleteScan.previousResults = g_AutoCompleteScan.results
+        g_AutoCompleteScan.previousQuery = g_AutoCompleteScan.query
+        UpdatedAutoCompleteWidgets()
+
+        if #g_AutoCompleteScan.results >= 1 then
+            for index, result in ipairs(g_AutoCompleteScan.results) do
+                Output("Suggestion: " .. result.word)
+            end
+        else
+            Output("no suggestions :(")
+        end
+    end
+
+
+    -- Reset
+    CB2_AutoCompleteScanCycle:Release()
+    CB2_AutoCompleteScanCycle = nil
+    g_AutoCompleteScan.inProgress = false
+    g_AutoCompleteScan.results = {}
+    g_AutoCompleteScan.currentIndex = 1
+    g_AutoCompleteScan.query = nil
+    
+
+end
+
+function AutoCompleteScanCycle()
+
+    local dictionaryLength = #g_Dictionary
+    local index = g_AutoCompleteScan.currentIndex
+    local stopIndex = math.min(index+AUTOCOMPLETE_LIMIT_SCAN, dictionaryLength)
+    local query = g_AutoCompleteScan.query
+
+    Debug.Table("AutoCompleteScanCycle", {
+                dictionaryLength = dictionaryLength,
+                index = index,
+                stopIndex = stopIndex,
+                query = query,
+                })
+
+    while index < stopIndex do
+        local word = g_Dictionary[index]
+
+        if unicode.match(word, query) ~= nil then
+            local suggestion = {word=word,badness=unicode.match(word, query)}
+            
+            if #g_AutoCompleteScan.results >= AUTOCOMPLETE_LIMIT_RESULTS then
+                local worstIndex = nil
+                local worstValue = nil
+                for resultIndex, result in ipairs(g_AutoCompleteScan.results) do
+                    if result.badness > suggestion.badness then
+                        if worstValue == nil or result.badness > worstValue then 
+                            worstValue = result.badness
+                            worstIndex = resultIndex
+                        end
+                    end
+                end
+                if worstIndex ~= nil then
+                    g_AutoCompleteScan.results[worstIndex] = suggestion
+                end
+            else
+                g_AutoCompleteScan.results[#g_AutoCompleteScan.results + 1] = suggestion
+            end
+        end
+
+
+        index = index + 1
+    end
+
+
+    if index + 1 >=dictionaryLength then
+        -- Task finished
+        StopAutoCompleteScan(true)
+    else
+        g_AutoCompleteScan.currentIndex = index
+    end
+
+end
+
+function PerformAutoCompletion(result)
+    local word = result.word
+    local query = g_AutoCompleteScan.previousQuery
+
+    local currentText = DAISY_INPUT:GetText()
+    local completedText = unicode.gsub(currentText, query, word)
+
+    DAISY_INPUT:SetText(completedText)
+
 end
