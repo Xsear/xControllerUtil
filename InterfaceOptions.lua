@@ -116,51 +116,80 @@ end
 
 function BuildDaisyWheelOptions()
     InterfaceOptions_RegisterOption({
-                                    id = InterfaceOptions_GenerateOptionId(g_Options.Daisy.Sizes, "WheelScale"),
-                                    default = g_Options.Daisy.Sizes.WheelScale,
-                                    type = "slider",
-                                    min = 0.1,
-                                    max = 10,
-                                    inc = 0.01,
-                                    multi = 100,
-                                    suffix = "%",
-                                    })
+        id = InterfaceOptions_GenerateOptionId(g_Options.Daisy.Sizes, "WheelScale"),
+        default = g_Options.Daisy.Sizes.WheelScale,
+        type = "slider",
+        min = 0.1,
+        max = 10,
+        inc = 0.01,
+        multi = 100,
+        suffix = "%",
+    })
     InterfaceOptions_RegisterOption({
-                                    id = InterfaceOptions_GenerateOptionId(g_Options.Daisy.Sizes, "PetalWidth"),
-                                    default = g_Options.Daisy.Sizes.PetalWidth,
-                                    type = "slider",
-                                    min = 1,
-                                    max = 3000,
-                                    inc = 1,
-                                    suffix = "px",
-                                    })
+        id = InterfaceOptions_GenerateOptionId(g_Options.Daisy.Sizes, "PetalWidth"),
+        default = g_Options.Daisy.Sizes.PetalWidth,
+        type = "slider",
+        min = 1,
+        max = 3000,
+        inc = 1,
+        suffix = "px",
+    })
     InterfaceOptions_RegisterOption({
-                                    id = InterfaceOptions_GenerateOptionId(g_Options.Daisy.Sizes, "PetalHeight"),
-                                    default = g_Options.Daisy.Sizes.PetalHeight,
-                                    type = "slider",
-                                    min = 1,
-                                    max = 3000,
-                                    inc = 1,
-                                    suffix = "px",
-                                    })
+        id = InterfaceOptions_GenerateOptionId(g_Options.Daisy.Sizes, "PetalHeight"),
+        default = g_Options.Daisy.Sizes.PetalHeight,
+        type = "slider",
+        min = 1,
+        max = 3000,
+        inc = 1,
+        suffix = "px",
+    })
     InterfaceOptions_RegisterOption({
-                                    id = InterfaceOptions_GenerateOptionId(g_Options.Daisy.Sizes, "EntryWidth"),
-                                    default = g_Options.Daisy.Sizes.EntryWidth,
-                                    type = "slider",
-                                    min = 1,
-                                    max = 3000,
-                                    inc = 1,
-                                    suffix = "px",
-                                    })
+        id = InterfaceOptions_GenerateOptionId(g_Options.Daisy.Sizes, "EntryWidth"),
+        default = g_Options.Daisy.Sizes.EntryWidth,
+        type = "slider",
+        min = 1,
+        max = 3000,
+        inc = 1,
+        suffix = "px",
+    })
     InterfaceOptions_RegisterOption({
-                                    id = InterfaceOptions_GenerateOptionId(g_Options.Daisy.Sizes, "EntryHeight"),
-                                    default = g_Options.Daisy.Sizes.EntryHeight,
-                                    type = "slider",
-                                    min = 1,
-                                    max = 3000,
-                                    inc = 1,
-                                    suffix = "px",
-                                    })
+        id = InterfaceOptions_GenerateOptionId(g_Options.Daisy.Sizes, "EntryHeight"),
+        default = g_Options.Daisy.Sizes.EntryHeight,
+        type = "slider",
+        min = 1,
+        max = 3000,
+        inc = 1,
+        suffix = "px",
+    })
+    InterfaceOptions_RegisterOption({
+        id = InterfaceOptions_GenerateOptionId(g_Options.Daisy.Config, "SwapThumbsticks"),
+        default = g_Options.Daisy.Config.SwapThumbsticks,
+        type = "checkbox",
+    })
+    InterfaceOptions_RegisterOption({
+        id = InterfaceOptions_GenerateOptionId(g_Options.Daisy.Config, "ThumbstickMovementPreventionHack"),
+        default = g_Options.Daisy.Config.ThumbstickMovementPreventionHack,
+        type = "checkbox",
+    })
+    InterfaceOptions_RegisterOption({
+        id = InterfaceOptions_GenerateOptionId(g_Options.Daisy.Config, "ThumbstickCoordinateTolerance"),
+        default = g_Options.Daisy.Config.ThumbstickCoordinateTolerance,
+        type = "slider",
+        min = 0,
+        max = 10,
+        inc = 1,
+        suffix = "",
+    })
+    InterfaceOptions_RegisterOption({
+        id = InterfaceOptions_GenerateOptionId(g_Options.Daisy.Config, "DisplayStateOverlay"),
+        default = g_Options.Daisy.Config.DisplayStateOverlay,
+        type = "checkbox",
+    })
+    InterfaceOptions_RegisterOption({
+        id = InterfaceOptions_GenerateOptionId(g_Options.Daisy.Config, "CoverUpTheHack"),
+        default = g_Options.Daisy.Config.CoverUpTheHack,
+        type = "checkbox",
+    })
 end
 
 
@@ -184,7 +213,7 @@ function InterfaceOptions_RegisterOption(args)
     assert(type(args.id) == "string")
     assert(args.type)
     assert(type(args.type) == "string")
-    assert(args.default)
+    assert(args.default ~= nil)
 
 
     local c_OptionTypeToAddFunction = {

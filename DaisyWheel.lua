@@ -123,6 +123,9 @@ DaisyOptions.Config.SwapThumbsticks = true
 DaisyOptions.Config.ThumbstickMovementPreventionHack = false
 DaisyOptions.Config.ThumbstickCoordinateTolerance = 2
 
+DaisyOptions["Debug"] = {}
+DaisyOptions.Config.DisplayStateOverlay = false
+DaisyOptions.Config.CoverUpTheHack = false
 
 g_KeySet_Daisy_DPAD = nil
 g_KeySet_Daisy_XYAB = nil
@@ -557,7 +560,7 @@ function ToggleThumbstickMode(enabled)
         CB2_DaisyThumbstickUpdate:Run(0.25)
 
         -- Cover all default UI
-        FRAME_FullscreenCover:Show(true)
+        FRAME_FullscreenCover:Show(DaisyOptions.Config.CoverUpTheHack)
         SHINE_RAYS:SetParam("alpha", 0.25);
         SHINE_ANIMATION_1:Play(0, 1, 60, true);
         SHINE_ANIMATION_2:Play(1, 0, 60, true);
@@ -614,28 +617,31 @@ function DaisyStateCycle()
 end
 
 function UpdateDaisyDpadText()
-    if not next(w_DaisyDPADTextWidgets) then
-        local temp_daisyCount = 0
-        for key, value in pairs(g_DaisyState.dpad) do
-            local text = Component.CreateWidget('<Text dimensions="height:100; width:20%; top:'..tostring(50 + (30*temp_daisyCount))..'" />', FRAME)
-            temp_daisyCount = temp_daisyCount + 1
-            w_DaisyDPADTextWidgets[key] = text 
-        end
-        w_DaisyDPADTextWidgets["direction"] = Component.CreateWidget('<Text dimensions="height:100; width:20%; top:'..tostring(50 + (30*temp_daisyCount))..'" />', FRAME)
-        temp_daisyCount = temp_daisyCount + 1
-        w_DaisyDPADTextWidgets["mode"] = Component.CreateWidget('<Text dimensions="height:100; width:20%; top:'..tostring(50 + (30*temp_daisyCount))..'" />', FRAME)
-        temp_daisyCount = temp_daisyCount + 1
-    end
 
-    for key, text in pairs(w_DaisyDPADTextWidgets) do
-        local value = (key == "mode" and g_DaisyState.mode) or (key == "direction" and g_DaisyState.direction) or g_DaisyState.dpad[key]
-        text:SetText(key .. " : " .. tostring(value))
-        if value then
-            text:SetTextColor("#00ff00")
-        else
-            text:SetTextColor("#ff0000")
+    if DaisyOptions.Config.DisplayStateOverlay then
+        if not next(w_DaisyDPADTextWidgets) then
+            local temp_daisyCount = 0
+            for key, value in pairs(g_DaisyState.dpad) do
+                local text = Component.CreateWidget('<Text dimensions="height:100; width:20%; top:'..tostring(50 + (30*temp_daisyCount))..'" />', FRAME)
+                temp_daisyCount = temp_daisyCount + 1
+                w_DaisyDPADTextWidgets[key] = text 
+            end
+            w_DaisyDPADTextWidgets["direction"] = Component.CreateWidget('<Text dimensions="height:100; width:20%; top:'..tostring(50 + (30*temp_daisyCount))..'" />', FRAME)
+            temp_daisyCount = temp_daisyCount + 1
+            w_DaisyDPADTextWidgets["mode"] = Component.CreateWidget('<Text dimensions="height:100; width:20%; top:'..tostring(50 + (30*temp_daisyCount))..'" />', FRAME)
+            temp_daisyCount = temp_daisyCount + 1
         end
-        
+
+        for key, text in pairs(w_DaisyDPADTextWidgets) do
+            local value = (key == "mode" and g_DaisyState.mode) or (key == "direction" and g_DaisyState.direction) or g_DaisyState.dpad[key]
+            text:SetText(key .. " : " .. tostring(value))
+            if value then
+                text:SetTextColor("#00ff00")
+            else
+                text:SetTextColor("#ff0000")
+            end
+            
+        end
     end
 end
 
@@ -953,8 +959,6 @@ function ThumbstickTest(args)
     args.event = "ThumbstickTest " .. args.name
 
     Debug.Event(args)
-
-    Component.GenerateEvent("MY_FULLPANEL_EVENT", {})
 
 end
 
