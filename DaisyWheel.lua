@@ -121,7 +121,7 @@ DaisyOptions["Config"] = {}
 DaisyOptions.Config.DirectionMethod = DaisyConstants.DirectionMethod.Thumbstick
 DaisyOptions.Config.SwapThumbsticks = true
 DaisyOptions.Config.ThumbstickMovementPreventionHack = false
-DaisyOptions.Config.ThumbstickCoordinateTolerance = 2
+DaisyOptions.Config.ThumbstickCoordinateTolerance = 10
 
 DaisyOptions["Debug"] = {}
 DaisyOptions.Config.DisplayStateOverlay = false
@@ -446,7 +446,7 @@ function DaisyWheel_Activate()
         
         -- Start Daisy State Cycle
         CB2_DaisyStateCycle = Callback2.CreateCycle(DaisyStateCycle)
-        CB2_DaisyStateCycle:Run(0.25)
+        CB2_DaisyStateCycle:Run(0.1) -- 0.25
 
         -- Lock Pizza keysets because they are likely bound to dpad :(
         g_KeySet_PizzaActivators:Activate(false)
@@ -550,8 +550,8 @@ function ToggleThumbstickMode(enabled)
         g_DaisyState.thumbstick.originalCvars[CVAR_GAMEPAD_SENSITIVITY_VERTMUL] = System.GetCvar(CVAR_GAMEPAD_SENSITIVITY_VERTMUL)
 
         -- These values help ensure good responsiveness, the values are the client maximums (?)
-        System.SetCvar(CVAR_GAMEPAD_SENSITIVITY_POW, 3.5)
-        System.SetCvar(CVAR_GAMEPAD_SENSITIVITY_VERTMUL, 1)
+        System.SetCvar(CVAR_GAMEPAD_SENSITIVITY_POW, -3.5) -- 3.5
+        System.SetCvar(CVAR_GAMEPAD_SENSITIVITY_VERTMUL, 0.5)   -- 2  --1
 
         -- Set initial state
         g_DaisyState.thumbstick.initialCoordinates = Game.GetMapCoordinates()
